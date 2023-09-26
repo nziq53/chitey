@@ -1,0 +1,55 @@
+[package]
+name = "chitey"
+version = "0.1.1"
+authors = ["oligami <nziq53@gmail.com>", "nicomiu404", "Ackky2424"]
+license-file = "MIT"
+description = ""
+repository = "https://github.com/oligami-0424/chitey.git"
+readme = "README.md"
+categories = [
+  "web-programming::http-server",
+  "asynchronous",
+  "network-programming",
+]
+keywords = ["http3", "http", "web", "chitey", "framework", "async"]
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "chitey"
+path = "src/lib.rs"
+
+[dependencies]
+http = "0.2"
+hyper = { version = "0.14", features = [
+  "server",
+  "http1",
+  "http2",
+  "stream",
+  "runtime",
+] }
+mpart-async = "0.6"
+chrono = "0.4"
+h3 = "0.0.2"
+h3-quinn = "0.0.3"
+tokio = { version = "1.32", features = [
+  "rt-multi-thread",
+  "macros",
+  "io-util",
+  "io-std",
+  "fs",
+  "time",
+] }
+bytes = "1"
+mime = "0.3"
+urlpattern = "0.2"
+rustls = { version = "0.21" }
+futures-util = "0.3"
+tracing = "0.1"
+tokio-rustls = "0.24"
+quinn = { version = "0.10", default-features = false, features = [
+  "runtime-tokio",
+  "tls-rustls",
+  "ring",
+] }
+rustls-pemfile = "1.0"
