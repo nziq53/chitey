@@ -2,9 +2,11 @@
 name = "chitey-codegen"
 version = "0.1.0"
 description = "Routing macros for Chitey"
-edition = "2021"
 repository = "https://github.com/oligami-0424/chitey.git"
 authors = ["oligami <nziq53@gmail.com>"]
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [lib]
 proc-macro = true
