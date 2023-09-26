@@ -2,6 +2,13 @@
 name = "chitey"
 version = "0.1.0"
 edition = "2021"
+authors = ["oligami <nziq53@gmail.com>", "nicomiu404", "Ackky2424"]
+license-file = "LICENSE"
+description = "Hoge library"
+repository = "https://github.com/oligami-0424/chitey"
+readme = "README.md"
+categories = ["web-programming"]
+keywords = ["http3-server", "simple"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
