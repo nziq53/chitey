@@ -3,7 +3,7 @@ name = "chitey"
 version = "0.1.1"
 authors = ["oligami <nziq53@gmail.com>", "nicomiu404", "Ackky2424"]
 license = "MIT"
-description = ""
+description = "Http3 and Https low layer server framework on hyper and h3"
 repository = "https://github.com/oligami-0424/chitey.git"
 categories = [
   "web-programming::http-server",
