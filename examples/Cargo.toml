@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "*", features = ["full"] }
-chitey = { version = "0.1" }
+chitey = { version = "0.1", features = ["macros"] }

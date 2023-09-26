@@ -1,6 +1,6 @@
 [package]
 name = "chitey"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["oligami <nziq53@gmail.com>", "nicomiu404", "Ackky2424"]
 description = "Http3 and Https low layer server framework on hyper and h3"
 repository = "https://github.com/oligami-0424/chitey.git"
@@ -52,6 +52,7 @@ quinn = { version = "0.10", default-features = false, features = [
   "ring",
 ] }
 rustls-pemfile = "1.0"
+chitey-codegen = "0.1"
 
 [features]
 macros = []
