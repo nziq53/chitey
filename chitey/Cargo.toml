@@ -5,7 +5,6 @@ authors = ["oligami <nziq53@gmail.com>", "nicomiu404", "Ackky2424"]
 license-file = "MIT"
 description = ""
 repository = "https://github.com/oligami-0424/chitey.git"
-readme = "README.md"
 categories = [
   "web-programming::http-server",
   "asynchronous",
