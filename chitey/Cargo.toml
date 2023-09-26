@@ -2,7 +2,7 @@
 name = "chitey"
 version = "0.1.1"
 authors = ["oligami <nziq53@gmail.com>", "nicomiu404", "Ackky2424"]
-license-file = "MIT"
+license = "MIT"
 description = ""
 repository = "https://github.com/oligami-0424/chitey.git"
 categories = [
