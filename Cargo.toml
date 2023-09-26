@@ -3,6 +3,7 @@
 [workspace]
 resolver = "2"
 members = ["chitey", "chitey-codegen", "chitey-router"]
+exclude = ["examples"]
 
 [workspace.package]
 license = "MIT"
