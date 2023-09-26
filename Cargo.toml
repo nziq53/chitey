@@ -2,7 +2,7 @@
 
 [workspace]
 resolver = "2"
-members = ["chitey", "chitey-codegen"]
+members = ["chitey", "chitey-codegen", "chitey-router"]
 
 [workspace.package]
 license = "MIT"
