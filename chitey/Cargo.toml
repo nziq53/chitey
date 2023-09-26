@@ -10,7 +10,7 @@ categories = [
   "asynchronous",
   "network-programming",
 ]
-keywords = ["http3", "http", "web", "chitey", "framework", "async"]
+keywords = ["http3", "http", "web", "chitey", "framework"]
 edition.workspace = true
 rust-version.workspace = true
 
