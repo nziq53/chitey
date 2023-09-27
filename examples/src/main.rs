@@ -1,14 +1,15 @@
-use chitey::{get, Responder, Path};
+use chitey::{get, Responder};
 use bytes::Bytes;
 use http::Response;
 
 #[tokio::main]
 async fn main() {
     println!("Hello, world!");
+
 }
 
 #[get("/hello/:name")]
-async fn greet(name: Path<String>) -> Responder {
+async fn greet(name: String) -> Responder {
     println!("Hello {name}!");
 
     let builder = Response::builder();
@@ -17,8 +18,7 @@ async fn greet(name: Path<String>) -> Responder {
 }
 
 #[get("/:id/:name")]
-async fn doubb(req: Path<(u32, String)>) -> Responder {
-    let (id, name) = req.to_owned();
+async fn doubb((id, name): (u32, String)) -> Responder {
     format!("Hello {}! id:{}", name, id);
 
     let builder = Response::builder();

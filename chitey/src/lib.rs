@@ -28,4 +28,3 @@ router_reexport!(Resource);
 router_reexport!(HttpServiceFactory);
 // router_reexport!(HandleRegister);
 router_reexport!(Responder);
-pub use chitey_router::path::Path;
