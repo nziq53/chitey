@@ -2,7 +2,7 @@ use std::{sync::{self, Arc}, net::SocketAddr, convert::Infallible, pin::Pin, tas
 
 use crate::response::response::handle_request_get;
 
-use super::util::{TlsCertsKey, CustomOption};
+use super::util::{TlsCertsKey};
 use bytes::{BytesMut, BufMut};
 use futures_util::{ready, Future, TryStreamExt};
 use http::{Request, Response, StatusCode, Method};

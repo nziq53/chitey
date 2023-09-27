@@ -5,7 +5,7 @@ use http::Request;
 use hyper::Body;
 use urlpattern::{UrlPattern, UrlPatternInit};
 
-use crate::{guard::Guard, tuple::{self, TupleAppend, Tuple, TupleWrapper}};
+use crate::{guard::Guard, tuple::{TupleAppend, Tuple, Path}, fn_service};
 
 // type Task<T: Future<Output = Responder> + Send, U> = fn(U) -> T;
 // type Task<T, U> = fn(U) -> T;
@@ -13,13 +13,16 @@ use crate::{guard::Guard, tuple::{self, TupleAppend, Tuple, TupleWrapper}};
 pub struct Resource {
     rdef: UrlPattern,
     name: Option<String>,
-    register: Option<BoxFuture<Responder>>,
+    register: Option<BoxedHandleFunc>,
     guard: Guard,
 }
+
+type BoxedHandleFunc = Pin<Box<dyn Fn(Request<Body>, bool) -> dyn Future<Output = Responder>>>;
 
 // pub struct BoxedResource {
 //     resource: Pin<Box<Resource<T, U>>>,
 // }
+use crate::fn_service::fn_service;
 
 impl Resource {
     /// Constructs new resource that matches a `path` pattern.
@@ -38,20 +41,28 @@ impl Resource {
         }
     }
 
-    pub fn regist<F, Req, Fut, Tp>(mut self, handler: F) -> Self
+    pub fn regist<F, Fut, T>(self, handler: F) -> Self
     where
-        F: Fn(Req) -> Fut + Clone,
-        Req: Tuple + From<TupleWrapper<(String,)>>,
-        Tp: Tuple,
+        F: Fn(Path<T>, (Request<Body>, bool)) -> Fut + Clone,
         Fut: Future<Output = Responder>,
     {
-        let register_wrap = Box::pin(|req: Request<Body>, isHttp3: bool| async move {
-            let tuple = ();
-            let tuple = tuple.append("#".to_owned());
-            let tuple2 = TupleWrapper::new(tuple);
-            // let y: Req = tuple.into();
-            handler(tuple2.into()).await
+        // let input = UrlPatternMatchInput::Url(url);
+        // let tuple2 = Path::new(tuple);
+        // if (self.rdef.exec())
+        let _register_wrap = fn_service(move |req: (Request<Body>, bool)| {
+            let handler = handler.clone();
+            let (req, is_http3) = req;
+
+            let tuple: Path<T> = Path::tuple_new(self.rdef, req.uri().clone());
+            async move {
+                handler(tuple, (req, is_http3)).await
+                // let tuple = ();
+                // let tuple = tuple.append("#".to_owned());
+                // let y: Req = tuple2.into();
+                // let pa = Path::new(tuple);
+            }
         });
+        // self.register = Some(_register_wrap);
         self
     }
 

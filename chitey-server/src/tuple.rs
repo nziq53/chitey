@@ -50,6 +50,7 @@ fn test_tuple_append() {
     println!("{:?}", with_world);
 }
 
+use http::Uri;
 use impl_trait_for_tuples::impl_for_tuples;
 
 pub trait Tuple {
@@ -63,49 +64,46 @@ impl Tuple for TupleIdentifier {
     }
 }
 
-impl Tuple for (String,) {
-    fn simbol_of_to_tuple(self) -> Self {
-        self
+use derive_more::{AsRef, Deref, DerefMut, Display, From};
+use urlpattern::{UrlPattern, UrlPatternInit};
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deref, DerefMut, AsRef, Display, From)]
+pub struct Path<T>(T);
+
+impl<T> Path<T>
+{
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+
+    pub fn new(t: T) -> Path<T> {
+        Self(t)
+    }
+    pub fn tuple_new(ptn: UrlPattern, uri: Uri) -> Path<T> {
+        
     }
 }
 
-pub struct TupleWrapper<T>
-where
-    T: Tuple,
-{
-    inner: Box<T>,
-}
 
-impl<T> TupleWrapper<T>
-where
-    T: Tuple,
-{
-    pub fn new(tuple: T) -> Self {
-        Self {
-            inner: Box::new(tuple),
-        }
-    }
-}
-
-impl Into<TupleWrapper<()>> for () {
-    fn into(self) -> TupleWrapper<()> {
-        TupleWrapper::new(self)
-    }
-}
-impl<T> Into<TupleWrapper<(T,)>> for (T,)
-where
-    T: Tuple,
-{
-    fn into(self) -> TupleWrapper<(T,)> {
-        TupleWrapper::new(self)
-    }
-}
-impl<T, T2> Into<TupleWrapper<(T, T2)>> for (T, T2)
-where
-    T: Tuple,
-    T2: Tuple,
-{
-    fn into(self) -> TupleWrapper<(T, T2)> {
-        TupleWrapper::new(self)
-    }
-}
+// impl Into<Path<()>> for () {
+//     fn into(self) -> Path<()> {
+//         Path::new(self)
+//     }
+// }
+// impl<T> Into<Path<(T,)>> for (T,)
+// where
+//     T: Tuple,
+// {
+//     fn into(self) -> Path<(T,)> {
+//         Path::new(self)
+//     }
+// }
+// impl<T, T2> Into<Path<(T, T2)>> for (T, T2)
+// where
+//     T: Tuple,
+//     T2: Tuple,
+// {
+//     fn into(self) -> Path<(T, T2)> {
+//         Path::new(self)
+//     }
+// }

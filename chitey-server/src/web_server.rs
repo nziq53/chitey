@@ -4,7 +4,7 @@ use std::{
     path::PathBuf, error::Error,
 };
 
-use crate::{server::{util::{get_certs_and_key, process_result, CustomOption}, http_server::{launch_http_server, HttpServerOpt}, https_server::{launch_https_server, HttpsServerOpt}, http3_server::{launch_http3_server, Http3ServerOpt}}, process::save_pid};
+use crate::{server::{util::{get_certs_and_key, process_result}, http_server::{launch_http_server, HttpServerOpt}, https_server::{launch_https_server, HttpsServerOpt}, http3_server::{launch_http3_server, Http3ServerOpt}}, process::save_pid};
 
 #[derive(Clone)]
 pub struct Certs {
