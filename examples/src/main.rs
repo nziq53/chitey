@@ -3,7 +3,7 @@ use bytes::Bytes;
 use http::Response;
 
 #[get("/hello/:name")]
-async fn greet(name: String) -> Responder {
+async fn greet((name,): (String,)) -> Responder {
     println!("Hello {name}!");
 
     let builder = Response::builder();
