@@ -30,6 +30,7 @@ impl syn::parse::Parse for RouteArgs {
 
         // let _ = ResourceDef::new(path.value());
         println!("{:?}", path.value());
+        println!("{:?}", path);
 
         // ##################
 
@@ -134,13 +135,13 @@ impl MethodTypeExt {
         match self {
             MethodTypeExt::Standard(method) => {
                 quote! {
-                    .guard(::actix_web::guard::#method())
+                    .guard(::chitey::guard::#method())
                 }
             }
             MethodTypeExt::Custom(lit) => {
                 quote! {
-                    .guard(::actix_web::guard::Method(
-                        ::actix_web::http::Method::from_bytes(#lit.as_bytes()).unwrap()
+                    .guard(::chitey::guard::Method(
+                        ::chitey::http::Method::from_bytes(#lit.as_bytes()).unwrap()
                     ))
                 }
             }
@@ -158,7 +159,7 @@ impl MethodTypeExt {
             MethodTypeExt::Standard(method) => {
                 quote! {
                     .guard(
-                        ::actix_web::guard::Any(::actix_web::guard::#method())
+                        ::chitey::guard::Any(::chitey::guard::#method())
                             #(#or_chain)*
                     )
                 }
@@ -166,9 +167,9 @@ impl MethodTypeExt {
             MethodTypeExt::Custom(lit) => {
                 quote! {
                     .guard(
-                        ::actix_web::guard::Any(
-                            ::actix_web::guard::Method(
-                                ::actix_web::http::Method::from_bytes(#lit.as_bytes()).unwrap()
+                        ::chitey::guard::Any(
+                            ::chitey::guard::Method(
+                                ::chitey::http::Method::from_bytes(#lit.as_bytes()).unwrap()
                             )
                         )
                         #(#or_chain)*
@@ -184,14 +185,14 @@ impl MethodTypeExt {
         match self {
             MethodTypeExt::Standard(method_type) => {
                 quote! {
-                    .or(::actix_web::guard::#method_type())
+                    .or(::chitey::guard::#method_type())
                 }
             }
             MethodTypeExt::Custom(lit) => {
                 quote! {
                     .or(
-                        ::actix_web::guard::Method(
-                            ::actix_web::http::Method::from_bytes(#lit.as_bytes()).unwrap()
+                        ::chitey::guard::Method(
+                            ::chitey::http::Method::from_bytes(#lit.as_bytes()).unwrap()
                         )
                     )
                 }
@@ -450,14 +451,16 @@ impl ToTokens for Route {
                 };
 
                 quote! {
-                    let __resource = ::actix_web::Resource::new(#path)
-                        .name(#resource_name)
-                        #method_guards
-                        #(.guard(::actix_web::guard::fn_guard(#guards)))*
-                        #(.wrap(#wrappers))*
-                        .to(#name);
-                    ::actix_web::dev::HttpServiceFactory::register(__resource, __config);
+                    let mut __resource = ::chitey::Resource::new(#path).regist(#name);
                 }
+                // return __resource;
+                // let __resource = ::chitey::Resource::new(#path)
+                //     .name(#resource_name)
+                //     #method_guards
+                //     #(.guard(::chitey::guard::fn_guard(#guards)))*
+                //     #(.wrap(#wrappers))*
+                //     .to(#name);
+                // ::chitey::dev::HttpServiceFactory::register(__resource, __config);
             })
             .collect();
 
@@ -466,8 +469,8 @@ impl ToTokens for Route {
             #[allow(non_camel_case_types, missing_docs)]
             pub struct #name;
 
-            impl ::actix_web::dev::HttpServiceFactory for #name {
-                fn register(self, __config: &mut actix_web::dev::AppService) {
+            impl ::chitey::HttpServiceFactory for #name {
+                fn register(&self) {
                     #ast
                     #registrations
                 }

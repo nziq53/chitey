@@ -1,7 +1,6 @@
 #![recursion_limit = "512"]
 
 use proc_macro::TokenStream;
-use quote::quote;
 
 mod route;
 

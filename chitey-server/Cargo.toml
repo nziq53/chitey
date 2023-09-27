@@ -1,0 +1,43 @@
+[package]
+name = "chitey-server"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+http = "0.2"
+hyper = { version = "0.14", features = [
+  "server",
+  "http1",
+  "http2",
+  "stream",
+  "runtime",
+] }
+mpart-async = "0.6"
+chrono = "0.4"
+h3 = "0.0.2"
+h3-quinn = "0.0.3"
+tokio = { version = "1.32", features = [
+  "rt-multi-thread",
+  "macros",
+  "io-util",
+  "io-std",
+  "fs",
+  "time",
+] }
+bytes = "1"
+mime = "0.3"
+urlpattern = "0.2"
+rustls = { version = "0.21" }
+futures-util = "0.3"
+tracing = "0.1"
+tokio-rustls = "0.24"
+quinn = { version = "0.10", default-features = false, features = [
+  "runtime-tokio",
+  "tls-rustls",
+  "ring",
+] }
+rustls-pemfile = "1.0"

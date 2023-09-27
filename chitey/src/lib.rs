@@ -1,12 +1,8 @@
-pub mod server;
-pub mod response;
-pub mod process;
-
 macro_rules! codegen_reexport {
-  ($name:ident) => {
-      #[cfg(feature = "macros")]
-      pub use chitey_codegen::$name;
-  };
+    ($name:ident) => {
+        #[cfg(feature = "macros")]
+        pub use chitey_codegen::$name;
+    };
 }
 
 // codegen_reexport!(main);
@@ -22,3 +18,14 @@ codegen_reexport!(post);
 // codegen_reexport!(trace);
 // codegen_reexport!(connect);
 // codegen_reexport!(options);
+
+macro_rules! router_reexport {
+    ($name:ident) => {
+        pub use chitey_router::resource::$name;
+    };
+}
+router_reexport!(Resource);
+router_reexport!(HttpServiceFactory);
+// router_reexport!(HandleRegister);
+router_reexport!(Responder);
+pub use chitey_router::path::Path;
