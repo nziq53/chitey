@@ -1,8 +1,9 @@
-use std::{error::Error, future::Future};
+use std::{error::Error, future::Future, pin::Pin};
 pub type Responder = Result<(http::response::Builder, bytes::Bytes), Box<dyn Error>>;
 
-use chitey_server::guard::Guard;
 use urlpattern::{UrlPattern, UrlPatternInit};
+
+use crate::guard::Guard;
 
 // type Task<T: Future<Output = Responder> + Send, U> = fn(U) -> T;
 type Task<T, U> = fn(U) -> T;
@@ -10,9 +11,13 @@ type Task<T, U> = fn(U) -> T;
 pub struct Resource<T: Future<Output = Responder> + Send, U> {
     rdef: UrlPattern,
     name: Option<String>,
-    register: Vec<Task<T, U>>,
+    register: Option<Task<T, U>>,
     guard: Guard,
 }
+
+// pub struct BoxedResource {
+//     resource: Pin<Box<Resource<T, U>>>,
+// }
 
 impl<T, U> Resource<T, U>
 where
@@ -29,12 +34,12 @@ where
         Resource {
             rdef: path,
             name: None,
-            register: vec![],
+            register: None,
             guard: Guard::Get,
         }
     }
     pub fn regist(mut self, handler: Task<T, U>) -> Self {
-        self.register.push(handler);
+        self.register = Some(handler);
         self
     }
     pub fn name(mut self, nm: &str) -> Self {
@@ -46,3 +51,5 @@ where
         self
     }
 }
+
+pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T>>>;

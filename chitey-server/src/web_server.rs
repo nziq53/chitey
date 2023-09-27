@@ -87,6 +87,11 @@ impl WebServer {
     }
 
     pub async fn run(self) -> Result<(), Box<dyn Error>> {
+        for mut factory in self.factories {
+            let factory = factory.as_mut();
+            factory.register();
+        }
+
         if let Some(cert) = self.cert {
             let tls_certs_key = get_certs_and_key(cert)?;
             let tls_certs_key2 = tls_certs_key.clone();
