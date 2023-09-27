@@ -22,6 +22,7 @@ path = "src/lib.rs"
 # chitey-codegen = "0.1"
 chitey-codegen = { path = "../chitey-codegen" }
 chitey-router = { path = "../chitey-router" }
+chitey-server = { path = "../chitey-server" }
 
 [features]
 macros = []

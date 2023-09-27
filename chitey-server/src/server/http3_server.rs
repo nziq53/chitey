@@ -19,7 +19,8 @@ use tracing::{error, info, trace_span};
 use crate::response::response::handle_request_get;
 use crate::server::http3_stream_wrapper::StreamWrapper;
 
-use super::servers::TlsCertsKey;
+use super::util::CustomOption;
+use super::util::TlsCertsKey;
 
 #[derive(Clone)]
 pub struct Http3ServerOpt {

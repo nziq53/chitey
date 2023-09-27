@@ -135,7 +135,7 @@ impl MethodTypeExt {
         match self {
             MethodTypeExt::Standard(method) => {
                 quote! {
-                    .guard(::chitey::guard::#method())
+                    .guard(::chitey::Guard::#method)
                 }
             }
             MethodTypeExt::Custom(lit) => {
@@ -159,7 +159,7 @@ impl MethodTypeExt {
             MethodTypeExt::Standard(method) => {
                 quote! {
                     .guard(
-                        ::chitey::guard::Any(::chitey::guard::#method())
+                        ::chitey::guard::Any(::chitey::Guard::#method)
                             #(#or_chain)*
                     )
                 }
@@ -185,7 +185,7 @@ impl MethodTypeExt {
         match self {
             MethodTypeExt::Standard(method_type) => {
                 quote! {
-                    .or(::chitey::guard::#method_type())
+                    .or(::chitey::Guard::#method_type())
                 }
             }
             MethodTypeExt::Custom(lit) => {
@@ -227,6 +227,7 @@ impl TryFrom<&syn::LitStr> for MethodTypeExt {
     }
 }
 
+#[allow(dead_code)]
 struct Args {
     path: syn::LitStr,
     resource_name: Option<syn::LitStr>,
@@ -451,7 +452,9 @@ impl ToTokens for Route {
                 };
 
                 quote! {
-                    let mut __resource = ::chitey::Resource::new(#path).regist(#name);
+                    let mut __resource = ::chitey::Resource::new(#path).regist(#name)
+                    .name(#resource_name)
+                    #method_guards;
                 }
                 // return __resource;
                 // let __resource = ::chitey::Resource::new(#path)

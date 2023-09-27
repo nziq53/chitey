@@ -25,6 +25,11 @@ macro_rules! router_reexport {
     };
 }
 router_reexport!(Resource);
-router_reexport!(HttpServiceFactory);
+// router_reexport!(HttpServiceFactory);
 // router_reexport!(HandleRegister);
 router_reexport!(Responder);
+pub use chitey_server::guard::Guard;
+pub use chitey_server::server::util::TlsCertsKey;
+pub use chitey_server::web_server::Certs;
+pub use chitey_server::web_server::HttpServiceFactory;
+pub use chitey_server::web_server::WebServer;
