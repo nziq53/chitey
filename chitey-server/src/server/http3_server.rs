@@ -18,6 +18,7 @@ use tracing::{error, info, trace_span};
 
 use crate::response::response::handle_request_get;
 use crate::server::http3_stream_wrapper::StreamWrapper;
+use crate::web_server::Factories;
 
 
 use super::util::TlsCertsKey;
@@ -30,6 +31,7 @@ pub struct Http3ServerOpt {
 pub async fn launch_http3_server(
     tls_cert_key: TlsCertsKey,
     http3_server_opt: Http3ServerOpt,
+    factories: Factories,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let TlsCertsKey { certs, key } = tls_cert_key;
     let Http3ServerOpt { listen } = http3_server_opt;

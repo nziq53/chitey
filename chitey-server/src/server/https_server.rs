@@ -1,6 +1,6 @@
 use std::{sync::{self, Arc}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
 
-use crate::response::response::handle_request_get;
+use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError}};
 
 use super::util::{TlsCertsKey};
 use bytes::{BytesMut, BufMut};
@@ -25,7 +25,7 @@ pub struct HttpsServerOpt {
   pub listen: SocketAddr,
 }
 
-pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt, factories: Arc<Factories>) -> Result<(), ChiteyError> {
   let TlsCertsKey{certs, key} = tls_cert_key;
   let HttpsServerOpt{listen} = https_server_opt;
 
@@ -43,17 +43,25 @@ pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: H
 
   let incoming = AddrIncoming::bind(&listen)
     .map_err(|e| error(format!("Incoming failed: {:?}", e))).expect("error");
-  let service = make_service_fn(|_| async { Ok::<_, Infallible>(service_fn(handle_https_service))});
-  let https_server = Server::builder(HyperAcceptor::new(tls_config, incoming)).serve(service);
+  let make_service = make_service_fn(move |_| {
+    let factories = factories.clone();
+    let service = service_fn(move |req| {
+      handle_https_service(req, factories.clone())
+    });
+
+    async move { Ok::<_, Infallible>(service) }
+  });
+  let https_server = Server::builder(HyperAcceptor::new(tls_config, incoming)).serve(make_service);
 
   // Prepare a long-running future stream to accept and serve clients.
 
   // handle incoming connections and requests
 
   println!("Starting to serve on https://{}.", listen);
-  let _ = https_server.await?;
-
-  Ok(())
+  match https_server.await {
+    Ok(_) => Ok(()),
+    Err(_) => Err(ChiteyError::InternalServerError),
+  }
 }
 
 pub struct HyperAcceptor {
@@ -162,7 +170,7 @@ impl Accept for HyperAcceptor {
   }
 }
 
-async fn handle_https_service(req: Request<Body>) -> Result<Response<Body>, http::Error> {
+async fn handle_https_service(req: Request<Body>, factories: Arc<Factories>) -> Result<Response<Body>, http::Error> {
   if req.uri().path().contains("..") {
     let builder = Response::builder()
       .header("Alt-Svc", "h3=\":443\"; ma=2592000")

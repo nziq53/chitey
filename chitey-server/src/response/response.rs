@@ -2,9 +2,9 @@
 use bytes::Bytes;
 use http::{Request, Response, StatusCode};
 
-pub async fn handle_request_get<T>(_req: &Request<T>, isHttp3: bool) -> Result<(http::response::Builder, bytes::Bytes), http::Error> {
+pub async fn handle_request_get<T>(_req: &Request<T>, is_http3: bool) -> Result<(http::response::Builder, bytes::Bytes), http::Error> {
   let builder = Response::builder();
-  let ret = if isHttp3 {
+  let ret = if is_http3 {
     Bytes::copy_from_slice(b"source and http3")
   } else {
     Bytes::copy_from_slice(b"source")
@@ -12,7 +12,7 @@ pub async fn handle_request_get<T>(_req: &Request<T>, isHttp3: bool) -> Result<(
   Ok((builder, ret))
 }
 
-pub async fn handle_request_post<T>(_req: &Request<T>, _isHttp3: bool) -> Result<(http::response::Builder, bytes::Bytes), http::Error> {
+pub async fn handle_request_post<T>(_req: &Request<T>, _is_http3: bool) -> Result<(http::response::Builder, bytes::Bytes), http::Error> {
   let builder = Response::builder()
     .header("Alt-Svc", "h3=\":443\"; ma=2592000")
     .status(StatusCode::OK);

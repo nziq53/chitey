@@ -79,9 +79,9 @@ impl<T> Path<T>
     pub fn new(t: T) -> Path<T> {
         Self(t)
     }
-    pub fn tuple_new(ptn: UrlPattern, uri: Uri) -> Path<T> {
+    // pub fn tuple_new(ptn: UrlPattern, uri: Uri) -> Path<T> {
         
-    }
+    // }
 }
 
 

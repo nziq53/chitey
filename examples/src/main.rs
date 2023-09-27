@@ -1,9 +1,9 @@
-use chitey::{get, Responder, WebServer, post, Certs};
+use chitey::{get, Responder, WebServer, post, Certs, Request};
 use bytes::Bytes;
 use http::Response;
 
 #[get("/hello/:name")]
-async fn greet((name,): (String,)) -> Responder {
+async fn greet((name,): (String,), req: Request) -> Responder {
     println!("Hello {name}!");
 
     let builder = Response::builder();
@@ -12,7 +12,7 @@ async fn greet((name,): (String,)) -> Responder {
 }
 
 #[get("/:id/:name")]
-async fn doubb((id, name): (u32, String)) -> Responder {
+async fn doubb((id, name): (u32, String), req: Request) -> Responder {
     format!("Hello {}! id:{}", name, id);
 
     let builder = Response::builder();
@@ -21,7 +21,7 @@ async fn doubb((id, name): (u32, String)) -> Responder {
 }
 
 #[post("/:id/:name")]
-async fn dd((id, name): (u32, String)) -> Responder {
+async fn dd((id, name): (u32, String), req: Request) -> Responder {
     format!("Hello {}! id:{}", name, id);
 
     let builder = Response::builder();
@@ -38,6 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .tls(Certs { cert: "server.cert".into(), key: "server.key".into() })
     .service(greet)
     .service(doubb)
+    .service(dd)
     .run()
     .await
 }
