@@ -1,6 +1,6 @@
-use std::{sync::{self, Arc}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
+use std::{sync::{self, Arc, RwLock}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
 
-use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError}};
+use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError}, guard::Guard};
 
 use super::util::{TlsCertsKey};
 use bytes::{BytesMut, BufMut};
@@ -25,7 +25,7 @@ pub struct HttpsServerOpt {
   pub listen: SocketAddr,
 }
 
-pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt, factories: Arc<Factories>) -> Result<(), ChiteyError> {
+pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt, factories: Arc<RwLock<Factories>>) -> Result<(), ChiteyError> {
   let TlsCertsKey{certs, key} = tls_cert_key;
   let HttpsServerOpt{listen} = https_server_opt;
 
@@ -170,7 +170,7 @@ impl Accept for HyperAcceptor {
   }
 }
 
-async fn handle_https_service(req: Request<Body>, factories: Arc<Factories>) -> Result<Response<Body>, http::Error> {
+async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factories>>) -> Result<Response<Body>, http::Error> {
   if req.uri().path().contains("..") {
     let builder = Response::builder()
       .header("Alt-Svc", "h3=\":443\"; ma=2592000")
@@ -183,6 +183,17 @@ async fn handle_https_service(req: Request<Body>, factories: Arc<Factories>) -> 
   let builder = Response::builder()
   .header("Alt-Svc", "h3=\":443\"; ma=2592000")
   .status(StatusCode::NOT_FOUND);
+
+  let url = req.uri().to_string().parse().unwrap();
+  let input = UrlPatternMatchInput::Url(url);
+  // let reader = factories.read().unwrap();
+  // for (res, factory) in &reader.factories {
+  //   if res.guard == Guard::Get && req.method() == Method::GET {
+  //     if let Ok(Some(result)) = res.rdef.exec(input.clone()) {
+  //       // return factory.get_mut().handler_func(url, req).await
+  //     };
+  //   }
+  // }
 
   if req.method() == Method::GET {
     let (mut resp, body) = handle_request_get(&req, false).await?;

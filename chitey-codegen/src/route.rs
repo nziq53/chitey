@@ -29,8 +29,8 @@ impl syn::parse::Parse for RouteArgs {
         // ##################
 
         // let _ = ResourceDef::new(path.value());
-        println!("{:?}", path.value());
-        println!("{:?}", path);
+        // println!("{:?}", path.value());
+        // println!("{:?}", path);
 
         // ##################
 
@@ -497,9 +497,9 @@ impl ToTokens for Route {
                 let #ident_name = match url_ptn_result.pathname.groups.get(#ident) {
                     Some(v) => match v.clone().parse() {
                         Ok(v) => v,
-                        Err(e) => return Err(Box::new(::chitey::ChiteyError::UrlPatternError)),
+                        Err(e) => return Err(::chitey::ChiteyError::UrlPatternError),
                     },
-                    None => return Err(Box::new(::chitey::ChiteyError::UrlPatternError)),
+                    None => return Err(::chitey::ChiteyError::UrlPatternError),
                 };
             };
             to_tuple_quotes.extend(to_tuple_quote);
@@ -511,7 +511,7 @@ impl ToTokens for Route {
             #[allow(non_camel_case_types, missing_docs)]
             pub struct #name;
 
-            #[::chitey::async_trait]
+            #[::chitey::async_trait(?Send)]
             impl ::chitey::HttpServiceFactory for #name
             {
                 fn register(&self) -> ::chitey::Resource {
@@ -521,9 +521,12 @@ impl ToTokens for Route {
                     #ast
                     let res = self.register();
                     let pattern = res.get_rdef();
-                    let url_ptn_result = match pattern.exec(url)? {
-                        Some(v) => v,
-                        None => return Err(Box::new(::chitey::ChiteyError::UrlPatternError)),
+                    let url_ptn_result = match pattern.exec(url) {
+                        Ok(v) => match v {
+                            Some(v) => v,
+                            None => return Err(::chitey::ChiteyError::UrlPatternError),
+                        },
+                        Err(_) => return Err(::chitey::ChiteyError::UrlPatternError),
                     };
                     #to_tuple_quotes
                     return #name(#tuples, req).await;

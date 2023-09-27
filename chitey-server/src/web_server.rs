@@ -13,7 +13,7 @@ use crate::{server::{util::{get_certs_and_key, process_result}, http_server::{la
 
 #[derive(Clone)]
 pub struct Factories {
-    factories: Vec<(Resource, Arc<Mutex<Box<dyn HttpServiceFactory + 'static + Send + Sync>>>)>,
+    pub(crate) factories: Vec<(Resource, Arc<Mutex<Box<dyn HttpServiceFactory + 'static + Send + Sync>>>)>,
 }
 unsafe impl Send for Factories {}
 unsafe impl Sync for Factories {}
@@ -28,7 +28,7 @@ pub struct Certs {
 pub trait HttpServiceFactory: Sync
 {
     fn register(&self) -> Resource;
-    async fn handler_func(self, url: UrlPatternMatchInput, req: Request) -> Responder where Self: Sized;
+    async fn handler_func(self, url: UrlPatternMatchInput, req: Request) -> Responder;
 }
 
 pub struct WebServer {
@@ -40,8 +40,6 @@ pub struct WebServer {
 }
 
 impl WebServer
-// where
-    // T: Tuple + 'static
 {
     pub fn new() -> Self {
         let localhost = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
@@ -56,7 +54,7 @@ impl WebServer
 
     pub fn service<F>(mut self, factory: F) -> Self
     where
-        F: HttpServiceFactory + 'static + Send + Sync + Clone,
+        F: HttpServiceFactory + 'static + Send + Sync,
     {
         let resource = factory.register();
         self.factories.push((resource, Box::new(factory)));
@@ -133,9 +131,9 @@ impl WebServer
             };
             });
             let handle_https = tokio::spawn(async move {
-                // loop {
-                    launch_https_server(tls_certs_key.clone(), https_server_opt.clone(), factories.clone()).await;
-                // }
+                loop {
+                    process_result(launch_https_server(tls_certs_key.clone(), https_server_opt.clone(), Arc::new(RwLock::new(factories.clone()))).await);
+                }
             });
             let handle_http3 = tokio::spawn(async move {
             loop {

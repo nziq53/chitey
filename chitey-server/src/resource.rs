@@ -9,10 +9,10 @@ use crate::{guard::Guard, tuple::{TupleAppend, Tuple, Path}, fn_service, web_ser
 
 #[derive(Debug)]
 pub struct Resource {
-    rdef: UrlPattern,
-    url_ptn: String,
-    name: Option<String>,
-    guard: Guard,
+    pub(crate) rdef: UrlPattern,
+    pub(crate) url_ptn: String,
+    pub(crate) name: Option<String>,
+    pub(crate) guard: Guard,
 }
 
 impl Resource {
