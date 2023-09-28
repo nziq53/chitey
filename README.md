@@ -42,7 +42,8 @@ async fn notfoundpost((): (), _req: Request) -> Responder {
     Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
 }
 
-#[tokio::main]
+// #[tokio::main]
+#[chitey::main]
 async fn main() -> Result<(), ChiteyError> {
     println!("Hello, world!");
     WebServer::new()

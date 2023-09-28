@@ -4,6 +4,7 @@ license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 version.workspace = true
+description = "chitey framework on this chitey-server"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
