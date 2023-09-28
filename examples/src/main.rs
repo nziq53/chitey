@@ -2,39 +2,29 @@ use chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError};
 use bytes::Bytes;
 use http::Response;
 
-#[get("/hello/:name")]
-async fn greet((name,): (String,), _req: Request) -> Responder {
-    println!("Hello {name}!");
-
-    let builder = Response::builder();
-    let ret = Bytes::copy_from_slice(b"source");
-    Ok((builder, ret))
+#[get("/:id/:name")]
+async fn greet((id, name): (u32, String), _req: Request) -> Responder {
+    Ok((Response::builder(), Bytes::from(format!("Hello {}! id:{}", name, id))))
 }
 
 #[get("/:id/:name")]
-async fn doubb((id, name): (u32, String), _req: Request) -> Responder {
-    let ret = format!("Hello {}! id:{}", name, id);
-
-    let builder = Response::builder();
-    let ret = Bytes::from(ret);
-    Ok((builder, ret))
-}
-
-#[post("/:id/:name")]
-async fn dd((id, name): (u32, String), _req: Request) -> Responder {
-    format!("Hello {}! id:{}", name, id);
-
-    let builder = Response::builder();
-    let ret = Bytes::copy_from_slice(b"source");
-    Ok((builder, ret))
+async fn greet_not_number((id, name): (String, String), _req: Request) -> Responder {
+    Ok((Response::builder(), Bytes::from(format!("HelloNotNumberId {}! id:{}", name, id))))
 }
 
 #[get("/")]
 async fn home((): (), _req: Request) -> Responder {
+    Ok((Response::builder(), Bytes::copy_from_slice(b"source")))
+}
 
-    let builder = Response::builder();
-    let ret = Bytes::copy_from_slice(b"source");
-    Ok((builder, ret))
+#[get("/**")]
+async fn notfound((): (), _req: Request) -> Responder {
+    Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
+}
+
+#[post("/**")]
+async fn notfoundpost((): (), _req: Request) -> Responder {
+    Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
 }
 
 #[tokio::main]
@@ -45,9 +35,10 @@ async fn main() -> Result<(), ChiteyError> {
     .tls_bind("localhost:18443").unwrap()
     .tls(Certs { cert: "server.cert".into(), key: "server.key".into() })
     .service(greet)
-    .service(doubb)
-    .service(dd)
+    .service(greet_not_number)
     .service(home)
+    .service(notfound)
+    .service(notfoundpost)
     .run()
     .await
 }
