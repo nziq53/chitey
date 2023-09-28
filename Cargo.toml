@@ -2,8 +2,14 @@
 
 [workspace]
 resolver = "2"
-members = ["chitey", "chitey-codegen", "chitey-router", "chitey-server"]
-exclude = ["examples"]
+members = [
+  "chitey",
+  "chitey-codegen",
+  "chitey-router",
+  "chitey-server",
+  "examples",
+]
+# exclude = ["examples"]
 
 [workspace.package]
 license = "MIT"

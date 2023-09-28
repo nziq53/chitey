@@ -10,11 +10,7 @@ httpはリダイレクト、https、http3を同じように書くことができ
 
 # 使い方
 
-```rust
-use chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError};
-use bytes::Bytes;
-use http::Response;
-
+```rustuse chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError, http::Response, Bytes};
 #[get("/:id/:name")]
 async fn greet((id, name): (u32, String), _req: Request) -> Responder {
     Ok((Response::builder(), Bytes::from(format!("Hello {}! id:{}", name, id))))
@@ -50,8 +46,7 @@ async fn notfoundpost((): (), _req: Request) -> Responder {
     Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
 }
 
-// #[tokio::main]
-#[chitey::main]
+#[tokio::main]
 async fn main() -> Result<(), ChiteyError> {
     println!("Hello, world!");
     WebServer::new()

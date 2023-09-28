@@ -1,6 +1,4 @@
-use chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError};
-use bytes::Bytes;
-use http::Response;
+use chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError, http::Response, Bytes};
 
 #[get("/:id/:name")]
 async fn greet((id, name): (u32, String), _req: Request) -> Responder {
@@ -37,8 +35,7 @@ async fn notfoundpost((): (), _req: Request) -> Responder {
     Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
 }
 
-// #[tokio::main]
-#[chitey::main]
+#[tokio::main]
 async fn main() -> Result<(), ChiteyError> {
     println!("Hello, world!");
     WebServer::new()

@@ -519,11 +519,12 @@ impl ToTokens for Route {
             #[::chitey::async_trait]
             impl ::chitey::HttpServiceFactory for #name
             {
-                // #[inline]
+                #[inline]
                 fn register(&self) -> ::chitey::Resource {
+                    #[allow(unused_variables)]
                     #registrations
                 }
-                // #[inline]
+                #[inline]
                 fn analyze_types(&self, url: ::chitey::UrlPatternMatchInput) -> bool {
                     let __chitey_url_ptn_result = match self.register().get_rdef().exec(url) {
                         Ok(v) => match v {
