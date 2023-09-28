@@ -516,6 +516,7 @@ impl ToTokens for Route {
             #[allow(non_camel_case_types, missing_docs)]
             pub struct #name;
 
+            #[allow(unused_variables)]
             #[::chitey::async_trait]
             impl ::chitey::HttpServiceFactory for #name
             {
@@ -536,8 +537,8 @@ impl ToTokens for Route {
                     let #tuple_types = #tuples;
                     return true;
                 }
-                #[allow(unused_variables)]
                 async fn handler_func(&self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
+                    #[allow(unused_variables)]
                     #ast
                     let __chitey_url_ptn_result = match self.register().get_rdef().exec(url) {
                         Ok(v) => match v {
