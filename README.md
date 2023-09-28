@@ -69,3 +69,12 @@ async fn main() -> Result<(), ChiteyError> {
     .await
 }
 ```
+
+## バックグラウンドで立てているサーバをkillするには
+```rust
+chitey::kill_server() -> Result<(), ChiteyError>;
+```
+を実行することによってキルできます。（各OSのtmpに保存しているので、最新のみです）
+
+certファイルをアップデートしたときに勝手に更新しません！！
+再起動しかないです。プルリクできる方はどうぞ
