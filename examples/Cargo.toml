@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "*", features = ["full"] }
-# chitey = { version = "0.1", features = ["macros"] }
-chitey = { path = "../chitey", features = ["macros"] }
+chitey = { version = "0.2", features = ["macros"] }
+# chitey = { path = "../chitey", features = ["macros"] }
 http = "0.2"
 bytes = "1.5"
