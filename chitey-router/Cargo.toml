@@ -1,10 +1,10 @@
 [package]
 name = "chitey-router"
-version = "0.1.0"
 description = "Routing Chitey"
 license.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+version.workspace = true
 repository = "https://github.com/oligami-0424/chitey.git"
 authors = ["oligami <nziq53@gmail.com>"]
 
