@@ -170,7 +170,7 @@ impl Accept for HyperAcceptor {
   }
 }
 
-async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factories>>) -> Result<Response<Body>, ChiteyError> {
+async fn handle_https_service(mut req: Request<Body>, factories: Arc<RwLock<Factories>>) -> Result<Response<Body>, ChiteyError> {
   if req.uri().path().contains("..") {
     let builder = Response::builder()
       .header("Alt-Svc", "h3=\":443\"; ma=2592000")
@@ -186,7 +186,8 @@ async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factorie
   {
     let method = req.method().clone();
     let req_contain_key = req.headers().contains_key("Another-Header");
-    let req = req.map(|_b| { () });
+    let stream = req.into_body();
+    // let req = req.map(|_b| { () });
     let factories = {
       factories.read().unwrap().factories.clone()
     };
@@ -194,7 +195,7 @@ async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factorie
       // GET
       if res.guard == Guard::Get && method == Method::GET {
         if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+          return match factory.lock().await.handler_func(input.clone(), (req, stream, false)).await {
             Ok((mut resp, body)) => {
               if req_contain_key {
                 resp = resp.header("Another-Header", "Ack");
@@ -212,7 +213,7 @@ async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factorie
       // POST
       if res.guard == Guard::Post && method == Method::POST {
         if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+          return match factory.lock().await.handler_func(input.clone(), (req, stream, false)).await {
             Ok((mut resp, body)) => {
               if req_contain_key {
                 resp = resp.header("Another-Header", "Ack");
@@ -261,7 +262,7 @@ async fn process_upload(id:String, builder:http::response::Builder, req: Request
   if mime_type.essence_str() != "multipart/form-data" {
       return builder.body(Body::from(""));
   }
-  let a = parse_mpart(req,mime_type).await;
+  let a = parse_mpart(req, mime_type).await;
   dbg!(&a);
   return builder.status(StatusCode::OK).body(Body::from(format!("uploadID: {}",id)));
 }

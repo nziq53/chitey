@@ -14,6 +14,7 @@ use h3::server::RequestStream;
 use http::Method;
 use http::Request;
 use http::StatusCode;
+use hyper::Body;
 use tracing::{error, info, trace_span};
 
 use crate::response::response::handle_request_get;
@@ -171,10 +172,12 @@ where
         //   info!("{:?}", post_data.chunk());
         // }
         let stm: StreamWrapper<T> = StreamWrapper::new(recv_stream);
+        let mut req = req.map(|_| Body::wrap_stream(stm));
+            let (re, b)  = req.into_parts();
 
         let mut multipart_stream = mpart_async::server::MultipartStream::new(
             boundary,
-            stm.map_ok(|buf| {
+            b.map_ok(|buf| {
                 let mut ret = BytesMut::with_capacity(buf.remaining());
                 ret.put(buf);
                 ret.freeze()
