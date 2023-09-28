@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use futures_util::lock::Mutex;
+use tokio::sync::Mutex;
 use urlpattern::{UrlPatternInit, UrlPatternMatchInput};
 use std::{
     io,
@@ -24,7 +24,7 @@ pub struct Certs {
     pub key: PathBuf,
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 pub trait HttpServiceFactory: Sync
 {
     fn register(&self) -> Resource;

@@ -511,7 +511,7 @@ impl ToTokens for Route {
             #[allow(non_camel_case_types, missing_docs)]
             pub struct #name;
 
-            #[::chitey::async_trait(?Send)]
+            #[::chitey::async_trait]
             impl ::chitey::HttpServiceFactory for #name
             {
                 fn register(&self) -> ::chitey::Resource {

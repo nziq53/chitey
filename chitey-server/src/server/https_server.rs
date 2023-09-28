@@ -3,7 +3,7 @@ use std::{sync::{self, Arc, RwLock, Mutex}, net::SocketAddr, convert::Infallible
 use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError, HttpServiceFactory}, guard::Guard};
 
 use super::util::{TlsCertsKey};
-use bytes::{BytesMut, BufMut};
+use bytes::{BytesMut, BufMut, Bytes};
 use futures_util::{ready, Future, TryStreamExt};
 use http::{Request, Response, StatusCode, Method};
 use hyper::{server::{conn::{AddrIncoming, AddrStream}, accept::Accept}, service::{make_service_fn, service_fn}, Server, Body};
@@ -194,46 +194,47 @@ async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factorie
       // GET
       if res.guard == Guard::Get && method == Method::GET {
         if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-          let lock = factory.lock().await;
-          match lock.handler_func(input.clone(), (req, false)).await {
+          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
             Ok((mut resp, body)) => {
               if req_contain_key {
                 resp = resp.header("Another-Header", "Ack");
               }
               match resp.body(Body::from(body)) {
-                  Ok(v) => return Ok(v),
-                  Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
+                  Ok(v) => Ok(v),
+                  Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
               }
             },
-            Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
+            Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
           }
         };
       }
-      
+
       // POST
-      // if res.guard == Guard::Post && method == Method::POST {
-      //   if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-      //     match factory.lock().await.handler_func(input.clone(), (req, false)).await {
-      //       Ok((mut resp, body)) => {
-      //         if req_contain_key {
-      //           resp = resp.header("Another-Header", "Ack");
-      //         }
-      //         match resp.body(Body::from(body)) {
-      //             Ok(v) => return Ok(v),
-      //             Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
-      //         }
-      //       },
-      //       Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
-      //     }
-      //   };
-      // }
+      if res.guard == Guard::Post && method == Method::POST {
+        if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
+          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+            Ok((mut resp, body)) => {
+              if req_contain_key {
+                resp = resp.header("Another-Header", "Ack");
+              }
+              match resp.body(Body::from(body)) {
+                  Ok(v) => Ok(v),
+                  Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+              }
+            },
+            Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+          }
+        };
+      }
     }
   }
 
   let builder = Response::builder()
     .header("Alt-Svc", "h3=\":443\"; ma=2592000")
     .status(StatusCode::NOT_FOUND);
-  match builder.body(Body::empty()) {
+  
+  match builder.body(Body::from(Bytes::copy_from_slice(b"page not found"))) {
+    // match builder.body(Body::empty()) {
     Ok(v) => Ok(v),
     Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
   }

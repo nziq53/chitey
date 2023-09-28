@@ -13,6 +13,15 @@ async fn greet((name,): (String,), _req: Request) -> Responder {
 
 #[get("/:id/:name")]
 async fn doubb((id, name): (u32, String), _req: Request) -> Responder {
+    let ret = format!("Hello {}! id:{}", name, id);
+
+    let builder = Response::builder();
+    let ret = Bytes::from(ret);
+    Ok((builder, ret))
+}
+
+#[post("/:id/:name")]
+async fn dd((id, name): (u32, String), _req: Request) -> Responder {
     format!("Hello {}! id:{}", name, id);
 
     let builder = Response::builder();
@@ -20,9 +29,8 @@ async fn doubb((id, name): (u32, String), _req: Request) -> Responder {
     Ok((builder, ret))
 }
 
-#[post("/:id/:name")]
-async fn dd((id, name): (u32, String), _req: Request) -> Responder {
-    format!("Hello {}! id:{}", name, id);
+#[get("/")]
+async fn home((): (), _req: Request) -> Responder {
 
     let builder = Response::builder();
     let ret = Bytes::copy_from_slice(b"source");
@@ -39,6 +47,7 @@ async fn main() -> Result<(), ChiteyError> {
     .service(greet)
     .service(doubb)
     .service(dd)
+    .service(home)
     .run()
     .await
 }
