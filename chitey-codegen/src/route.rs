@@ -494,7 +494,7 @@ impl ToTokens for Route {
         for ident in tuple_idents.clone() {
             let ident_name = Ident::new(&ident, Span::call_site());
             let to_tuple_quote = quote! {
-                let #ident_name = match url_ptn_result.pathname.groups.get(#ident) {
+                let #ident_name = match __chitey_url_ptn_result.pathname.groups.get(#ident) {
                     Some(v) => match v.clone().parse() {
                         Ok(v) => v,
                         Err(e) => return Err(::chitey::ChiteyError::UrlPatternError),
@@ -509,7 +509,7 @@ impl ToTokens for Route {
         for ident in tuple_idents {
             let ident_name = Ident::new(&ident, Span::call_site());
             let to_tuple_quote: TokenStream2 = quote! {
-                let #ident_name = match url_ptn_result.pathname.groups.get(#ident) {
+                let #ident_name = match __chitey_url_ptn_result.pathname.groups.get(#ident) {
                     Some(v) => match v.clone().parse() {
                         Ok(v) => v,
                         Err(e) => return false,
@@ -536,8 +536,7 @@ impl ToTokens for Route {
                 }
                 // #[inline]
                 fn analyze_types(&self, url: ::chitey::UrlPatternMatchInput) -> bool {
-                    let pattern = self.register().get_rdef();
-                    let url_ptn_result = match pattern.exec(url) {
+                    let __chitey_url_ptn_result = match self.register().get_rdef().exec(url) {
                         Ok(v) => match v {
                             Some(v) => v,
                             None => return false,
@@ -550,8 +549,7 @@ impl ToTokens for Route {
                 }
                 async fn handler_func(&self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
                     #ast
-                    let pattern = self.register().get_rdef();
-                    let url_ptn_result = match pattern.exec(url) {
+                    let __chitey_url_ptn_result = match self.register().get_rdef().exec(url) {
                         Ok(v) => match v {
                             Some(v) => v,
                             None => return Err(::chitey::ChiteyError::UrlPatternError),
