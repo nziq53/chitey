@@ -166,4 +166,6 @@ pub enum ChiteyError {
     InternalServerError(String),
     #[error("cannot analyze key")]
     KeyAnalyzeError(String),
+    #[error("failed kill server")]
+    ServerKillError(String),
 }

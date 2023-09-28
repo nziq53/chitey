@@ -33,3 +33,4 @@ pub use async_trait::async_trait;
 pub use chitey_server::web_server::ChiteyError;
 pub use urlpattern::UrlPatternMatchInput;
 pub use tokio::main;
+pub use chitey_server::process::kill_server;
