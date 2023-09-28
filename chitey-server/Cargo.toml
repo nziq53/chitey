@@ -34,7 +34,7 @@ quinn = { version = "0.10", default-features = false, features = [
 ] }
 rustls-pemfile = "1.0"
 derive_more = "0.99"
-impl-trait-for-tuples = "0.2"
+# impl-trait-for-tuples = "0.2"
 async-trait.workspace = true
 tokio.workspace = true
 urlpattern.workspace = true

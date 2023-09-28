@@ -17,4 +17,3 @@ quote = "1"
 syn = { version = "2", features = ["full", "extra-traits"] }
 # chitey-router = "0.2"
 # chitey-router = { path = "../chitey-router" }
-async-trait.workspace = true
