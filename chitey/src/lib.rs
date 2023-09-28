@@ -36,5 +36,7 @@ pub use tokio;
 pub use tokio::main;
 pub use chitey_server::process::kill_server;
 pub use http;
+pub use hyper;
+pub use hyper::Body;
 pub use bytes;
 pub use bytes::Bytes;

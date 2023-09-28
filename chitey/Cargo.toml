@@ -30,6 +30,7 @@ urlpattern.workspace = true
 tokio.workspace = true
 http = "0.2"
 bytes = "1"
+hyper = "0.14"
 
 [features]
 macros = []
