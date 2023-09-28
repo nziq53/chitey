@@ -153,7 +153,7 @@ impl WebServer
     }
 }
 
-pub type Request = (http::Request<()>, hyper::Body, bool);
+pub type Request = (http::Request<Body>, bool);
 
 
 use thiserror::Error;

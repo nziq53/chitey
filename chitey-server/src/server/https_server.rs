@@ -186,8 +186,6 @@ async fn handle_https_service(mut req: Request<Body>, factories: Arc<RwLock<Fact
   {
     let method = req.method().clone();
     let req_contain_key = req.headers().contains_key("Another-Header");
-    let stream = req.into_body();
-    // let req = req.map(|_b| { () });
     let factories = {
       factories.read().unwrap().factories.clone()
     };
@@ -195,7 +193,7 @@ async fn handle_https_service(mut req: Request<Body>, factories: Arc<RwLock<Fact
       // GET
       if res.guard == Guard::Get && method == Method::GET {
         if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-          return match factory.lock().await.handler_func(input.clone(), (req, stream, false)).await {
+          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
             Ok((mut resp, body)) => {
               if req_contain_key {
                 resp = resp.header("Another-Header", "Ack");
@@ -213,7 +211,7 @@ async fn handle_https_service(mut req: Request<Body>, factories: Arc<RwLock<Fact
       // POST
       if res.guard == Guard::Post && method == Method::POST {
         if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-          return match factory.lock().await.handler_func(input.clone(), (req, stream, false)).await {
+          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
             Ok((mut resp, body)) => {
               if req_contain_key {
                 resp = resp.header("Another-Header", "Ack");
