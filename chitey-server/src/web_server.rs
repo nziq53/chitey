@@ -1,15 +1,15 @@
 use async_trait::async_trait;
 use tokio::sync::Mutex;
-use urlpattern::{UrlPatternInit, UrlPatternMatchInput};
+use urlpattern::UrlPatternMatchInput;
 use std::{
     io,
     net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
-    path::PathBuf, error::Error, pin::Pin, sync::{RwLock, Arc},
+    path::PathBuf, pin::Pin, sync::Arc,
 };
 
 use hyper::Body;
 
-use crate::{server::{util::{get_certs_and_key, process_result}, http_server::{launch_http_server, HttpServerOpt}, https_server::{launch_https_server, HttpsServerOpt}, http3_server::{launch_http3_server, Http3ServerOpt}}, process::save_pid, resource::{Resource, Responder}, tuple::{Tuple, Path}};
+use crate::{server::{util::{get_certs_and_key, process_result}, http_server::{launch_http_server, HttpServerOpt}, https_server::{launch_https_server, HttpsServerOpt}, http3_server::{launch_http3_server, Http3ServerOpt}}, process::save_pid, resource::{Resource, Responder}};
 
 #[derive(Clone)]
 pub struct Factories {

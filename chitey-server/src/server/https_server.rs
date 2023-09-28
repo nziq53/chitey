@@ -1,8 +1,8 @@
-use std::{sync::{self, Arc, RwLock, Mutex}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
+use std::{sync::{self, Arc}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
 
-use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError, HttpServiceFactory}, guard::Guard};
+use crate::{web_server::{Factories, ChiteyError}, guard::Guard};
 
-use super::util::{TlsCertsKey};
+use super::util::TlsCertsKey;
 use bytes::{BytesMut, BufMut, Bytes};
 use futures_util::{ready, Future, TryStreamExt};
 use http::{Request, Response, StatusCode, Method};
@@ -10,10 +10,8 @@ use hyper::{server::{conn::{AddrIncoming, AddrStream}, accept::Accept}, service:
 use mime::Mime;
 use rustls::ServerConfig;
 use tokio::io::{AsyncRead, ReadBuf, self, AsyncWrite};
-use urlpattern::{UrlPatternInit, UrlPattern, UrlPatternMatchInput};
+use urlpattern::UrlPatternMatchInput;
 use super::util::error;
-use tracing::info;
-
 
 // HTTP/2 TLS など  chromeなどのブラウザはこちらに最初にアクセスしてくる
 // https://github.com/quic-go/quic-go/issues/3890
@@ -243,7 +241,7 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
 }
 
 //uploadIDを表示させる関数
-async fn process_upload(id:String, builder:http::response::Builder, req: Request<Body>) -> Result<Response<Body>, http::Error>{
+pub async fn process_upload(id:String, builder:http::response::Builder, req: Request<Body>) -> Result<Response<Body>, http::Error>{
     println!("uploadID: {}",id);
     let content_type_option = req.headers().get("content-type");
     if content_type_option.is_none() {
@@ -292,6 +290,7 @@ async fn parse_mpart(req: Request<Body>, mime_type: Mime) -> HashMap<String, Str
             bufferlen += bytes.len() as i64;
             writer.write(&bytes).unwrap();
         }
+        println!("{bufferlen}");
         a.insert(name, filename);
         }else{
         let mut buffer = BytesMut::new();

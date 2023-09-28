@@ -1,11 +1,8 @@
-use std::{error::Error, future::Future, pin::Pin};
 pub type Responder = Result<(http::response::Builder, bytes::Bytes), ChiteyError>;
 
-use http::Request;
-use hyper::Body;
 use urlpattern::{UrlPattern, UrlPatternInit};
 
-use crate::{guard::Guard, tuple::{TupleAppend, Tuple, Path}, fn_service, web_server::{self, ChiteyError}};
+use crate::{guard::Guard, web_server::ChiteyError};
 
 #[derive(Debug)]
 pub struct Resource {

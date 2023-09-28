@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, ToTokens, TokenStreamExt};
-use syn::{punctuated::Punctuated, Ident, LitStr, Path, Token, PatType, parse_quote, Pat, FnArg};
+use syn::{punctuated::Punctuated, Ident, LitStr, Path, Token, Pat, FnArg};
 
 #[derive(Debug)]
 pub struct RouteArgs {
@@ -419,6 +419,7 @@ impl ToTokens for Route {
             doc_attributes,
         } = self;
         
+        #[allow(unused_variables)]
         let registrations: TokenStream2 = args
             .iter()
             .map(|args| {
