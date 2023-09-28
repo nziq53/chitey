@@ -16,9 +16,12 @@ use http::Request;
 use http::StatusCode;
 use hyper::Body;
 use tracing::{error, info, trace_span};
+use urlpattern::UrlPatternMatchInput;
 
+use crate::guard::Guard;
 use crate::response::response::handle_request_get;
 use crate::server::http3_stream_wrapper::StreamWrapper;
+use crate::web_server::ChiteyError;
 use crate::web_server::Factories;
 
 
@@ -58,6 +61,7 @@ pub async fn launch_http3_server(
         #[cfg(debug_assertions)]
         trace_span!("New connection being attempted");
 
+        let factories = factories.clone();
         tokio::spawn(async move {
             match new_conn.await {
                 Ok(conn) => {
@@ -74,12 +78,13 @@ pub async fn launch_http3_server(
                                 #[cfg(debug_assertions)]
                                 info!("new request: {:#?}", req);
 
+                                let factories = factories.clone();
                                 tokio::spawn(async move {
                                     // if let Err(e) = handle_request_http3(req, stream).await {
                                     //     #[cfg(debug_assertions)]
                                     //     error!("handling request failed: {}", e);
                                     // };
-                                    let _ = handle_request_http3(req, stream).await;
+                                    let _ = handle_request_http3(req, stream, factories).await;
                                 });
                             }
 
@@ -118,20 +123,15 @@ pub async fn launch_http3_server(
 pub async fn handle_request_http3<T>(
     req: Request<()>,
     mut stream: RequestStream<T, Bytes>,
-) -> Result<(), Box<dyn std::error::Error>>
+    factories: Factories,
+) -> Result<(), ChiteyError>
 where
     T: BidiStream<Bytes> + 'static + Send + Sync,
 {
-    let status = if req.uri().path().contains("..") {
-        StatusCode::NOT_FOUND
-    } else {
-        StatusCode::OK
-    };
+    if req.uri().path().contains("..") {
+        let resp = http::Response::builder().status(StatusCode::NOT_FOUND).body(()).unwrap();
 
-    info!("{:?}", req.method());
-    if req.method() == Method::GET {
-        let (resp, body) = handle_request_get(&req, true).await?;
-        match stream.send_response(resp.body(()).unwrap()).await {
+        match stream.send_response(resp).await {
             Ok(_) => {
                 #[cfg(debug_assertions)]
                 info!("successfully respond to connection");
@@ -140,85 +140,135 @@ where
                 #[cfg(debug_assertions)]
                 error!("unable to send response to connection peer: {:?}", err);
             }
-        };
-        info!("{:?}", body);
-        stream.send_data(body).await?;
-        Ok(stream.finish().await?)
-    } else if req.method() == Method::POST {
-        let (mut send_stream, recv_stream) = stream.split();
-        let content_type_option = req.headers().get("content-type");
-        if content_type_option.is_none() {
-            return Ok(());
         }
-        let content_type = content_type_option.unwrap();
-        let mime_type_result: Result<mime::Mime, _> = match content_type.to_str() {
-            Ok(s) => s
-                .parse()
-                .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err)),
-            Err(err) => Err(std::io::Error::new(std::io::ErrorKind::Other, err)),
-        };
-        if mime_type_result.is_err() {
-            return Ok(());
+        stream.send_data(Bytes::copy_from_slice(b"page not found")).await;
+        return match stream.finish().await {
+            Ok(_) => Ok(()),
+            Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
         }
-        let mime_type = mime_type_result.unwrap();
-        if mime_type.essence_str() != "multipart/form-data" {
-            return Ok(());
+    }
+    let url = req.uri().to_string().parse().unwrap();
+    let input = UrlPatternMatchInput::Url(url);
+
+    let method = req.method().clone();
+    let req_contain_key = req.headers().contains_key("Another-Header");
+
+    let (mut send_stream, recv_stream) = stream.split();
+    let stm: StreamWrapper<T> = StreamWrapper::new(recv_stream);
+    let req = req.map(|_| Body::wrap_stream(stm));
+
+    for (res, factory) in factories.factories {
+        // GET
+        if res.guard == Guard::Get && method == Method::GET {
+          if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
+            return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+              Ok((mut resp, body)) => {
+                if req_contain_key {
+                  resp = resp.header("Another-Header", "Ack");
+                }
+                send_stream.send_response(resp.body(()).unwrap()).await;
+                send_stream.send_data(body).await;
+                match send_stream.finish().await {
+                    Ok(_) => Ok(()),
+                    Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
+                }
+              },
+              Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+            }
+          };
         }
-        let boundary = mime_type
-            .get_param("boundary")
-            .map(|v| v.to_string())
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "boundary not found"))?;
-        // if let Ok(Some(post_data)) = stream.recv_data().await{
-        //   info!("{:?}", post_data.chunk());
+  
+        // POST
+        if res.guard == Guard::Post && method == Method::POST {
+          if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
+            return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+              Ok((mut resp, body)) => {
+                if req_contain_key {
+                  resp = resp.header("Another-Header", "Ack");
+                }
+                send_stream.send_response(resp.body(()).unwrap()).await;
+                send_stream.send_data(body).await;
+                match send_stream.finish().await {
+                    Ok(_) => Ok(()),
+                    Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
+                }
+              },
+              Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+            }
+          };
+        }
+      }
+
+
+        // let content_type = content_type_option.unwrap();
+        // let mime_type_result: Result<mime::Mime, _> = match content_type.to_str() {
+        //     Ok(s) => s
+        //         .parse()
+        //         .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err)),
+        //     Err(err) => Err(std::io::Error::new(std::io::ErrorKind::Other, err)),
+        // };
+        // if mime_type_result.is_err() {
+        //     return Ok(());
         // }
-        let stm: StreamWrapper<T> = StreamWrapper::new(recv_stream);
-        let mut req = req.map(|_| Body::wrap_stream(stm));
-            let (re, b)  = req.into_parts();
+        // let mime_type = mime_type_result.unwrap();
+        // if mime_type.essence_str() != "multipart/form-data" {
+        //     return Ok(());
+        // }
+        // let boundary = mime_type
+        //     .get_param("boundary")
+        //     .map(|v| v.to_string())
+        //     .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "boundary not found"))?;
+        // // if let Ok(Some(post_data)) = stream.recv_data().await{
+        // //   info!("{:?}", post_data.chunk());
+        // // }
+        // let stm: StreamWrapper<T> = StreamWrapper::new(recv_stream);
+        // let mut req = req.map(|_| Body::wrap_stream(stm));
+        //     let (re, b)  = req.into_parts();
 
-        let mut multipart_stream = mpart_async::server::MultipartStream::new(
-            boundary,
-            b.map_ok(|buf| {
-                let mut ret = BytesMut::with_capacity(buf.remaining());
-                ret.put(buf);
-                ret.freeze()
-            }),
-        );
+        // let mut multipart_stream = mpart_async::server::MultipartStream::new(
+        //     boundary,
+        //     b.map_ok(|buf| {
+        //         let mut ret = BytesMut::with_capacity(buf.remaining());
+        //         ret.put(buf);
+        //         ret.freeze()
+        //     }),
+        // );
 
-        while let Ok(Some(mut field)) = multipart_stream.try_next().await {
-            println!("Field name:{}", field.name().unwrap());
-            if let Ok(filename) = field.filename() {
-                println!("Field filename:{}", filename);
-                let mut writer = BufWriter::new(File::create(filename.as_ref()).unwrap());
-                let mut bufferlen: i64 = 0;
-                while let Ok(Some(bytes)) = field.try_next().await {
-                    bufferlen += bytes.len() as i64;
-                    writer.write(&bytes).unwrap();
-                }
-                println!("Bytes received:{}", bufferlen);
-            } else {
-                let mut buffer = BytesMut::new();
-                while let Ok(Some(bytes)) = field.try_next().await {
-                    buffer.put(bytes);
-                }
-                let value: String = String::from_utf8(buffer.to_vec()).unwrap();
-                println!("{} = {}", field.name().unwrap(), value);
-            }
-        }
+        // while let Ok(Some(mut field)) = multipart_stream.try_next().await {
+        //     println!("Field name:{}", field.name().unwrap());
+        //     if let Ok(filename) = field.filename() {
+        //         println!("Field filename:{}", filename);
+        //         let mut writer = BufWriter::new(File::create(filename.as_ref()).unwrap());
+        //         let mut bufferlen: i64 = 0;
+        //         while let Ok(Some(bytes)) = field.try_next().await {
+        //             bufferlen += bytes.len() as i64;
+        //             writer.write(&bytes).unwrap();
+        //         }
+        //         println!("Bytes received:{}", bufferlen);
+        //     } else {
+        //         let mut buffer = BytesMut::new();
+        //         while let Ok(Some(bytes)) = field.try_next().await {
+        //             buffer.put(bytes);
+        //         }
+        //         let value: String = String::from_utf8(buffer.to_vec()).unwrap();
+        //         println!("{} = {}", field.name().unwrap(), value);
+        //     }
+        // }
 
-        let resp = http::Response::builder().status(status).body(()).unwrap();
+        // let resp = http::Response::builder().status(status).body(()).unwrap();
 
-        // let post_stream = PostStream
+        // // let post_stream = PostStream
 
-        match send_stream.send_response(resp).await {
-            Ok(_) => {
-                #[cfg(debug_assertions)]
-                info!("successfully respond to connection");
-            }
-            Err(err) => {
-                #[cfg(debug_assertions)]
-                error!("unable to send response to connection peer: {:?}", err);
-            }
-        }
+        // match send_stream.send_response(resp).await {
+        //     Ok(_) => {
+        //         #[cfg(debug_assertions)]
+        //         info!("successfully respond to connection");
+        //     }
+        //     Err(err) => {
+        //         #[cfg(debug_assertions)]
+        //         error!("unable to send response to connection peer: {:?}", err);
+        //     }
+        // }
 
         // if let Ok(Some(post_data)) = recv_stream.recv_data().await{
         //   info!("{:?}", post_data.chunk());
@@ -260,22 +310,13 @@ where
         // send_stream.send_data(buf.freeze()).await?;
 
         // Ok(send_stream.finish().await?)
-        Ok(())
-    } else {
-        let resp = http::Response::builder()
-            .status(StatusCode::NOT_ACCEPTABLE)
-            .body(())
-            .unwrap();
-        match stream.send_response(resp).await {
-            Ok(_) => {
-                #[cfg(debug_assertions)]
-                info!("successfully respond to connection");
-            }
-            Err(err) => {
-                #[cfg(debug_assertions)]
-                error!("unable to send response to connection peer: {:?}", err);
-            }
-        };
-        Ok(stream.finish().await?)
+    //     Ok(())
+    // } else {
+    let resp = http::Response::builder().status(StatusCode::NOT_FOUND).body(()).unwrap();
+    send_stream.send_response(resp).await;
+    send_stream.send_data(Bytes::copy_from_slice(b"page not found")).await;
+    return match send_stream.finish().await {
+        Ok(_) => Ok(()),
+        Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
     }
 }

@@ -25,7 +25,7 @@ pub struct HttpsServerOpt {
   pub listen: SocketAddr,
 }
 
-pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt, factories: Arc<RwLock<Factories>>) -> Result<(), ChiteyError> {
+pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt, factories: Factories) -> Result<(), ChiteyError> {
   let TlsCertsKey{certs, key} = tls_cert_key;
   let HttpsServerOpt{listen} = https_server_opt;
 
@@ -170,7 +170,7 @@ impl Accept for HyperAcceptor {
   }
 }
 
-async fn handle_https_service(mut req: Request<Body>, factories: Arc<RwLock<Factories>>) -> Result<Response<Body>, ChiteyError> {
+async fn handle_https_service(req: Request<Body>, factories: Factories) -> Result<Response<Body>, ChiteyError> {
   if req.uri().path().contains("..") {
     let builder = Response::builder()
       .header("Alt-Svc", "h3=\":443\"; ma=2592000")
@@ -186,10 +186,7 @@ async fn handle_https_service(mut req: Request<Body>, factories: Arc<RwLock<Fact
   {
     let method = req.method().clone();
     let req_contain_key = req.headers().contains_key("Another-Header");
-    let factories = {
-      factories.read().unwrap().factories.clone()
-    };
-    for (res, factory) in factories {
+    for (res, factory) in factories.factories {
       // GET
       if res.guard == Guard::Get && method == Method::GET {
         if let Ok(Some(_)) = res.rdef.exec(input.clone()) {

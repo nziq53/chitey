@@ -25,6 +25,7 @@ chitey-router = { path = "../chitey-router" }
 chitey-server = { path = "../chitey-server" }
 async-trait.workspace = true
 urlpattern.workspace = true
+tokio.workspace = true
 
 [features]
 macros = []

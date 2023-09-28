@@ -132,7 +132,7 @@ impl WebServer
             });
             let handle_https = tokio::spawn(async move {
                 loop {
-                    process_result(launch_https_server(tls_certs_key.clone(), https_server_opt.clone(), Arc::new(RwLock::new(factories.clone()))).await);
+                    process_result(launch_https_server(tls_certs_key.clone(), https_server_opt.clone(), factories.clone()).await);
                 }
             });
             let handle_http3 = tokio::spawn(async move {
