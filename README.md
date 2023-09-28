@@ -22,6 +22,16 @@ async fn home((): (), _req: Request) -> Responder {
     Ok((Response::builder(), Bytes::copy_from_slice(b"source")))
 }
 
+#[get("/all/:all")]
+async fn all_all_path((): (), _req: Request) -> Responder {
+    Ok((Response::builder(), Bytes::copy_from_slice(b"source")))
+}
+
+#[get("/:all")]
+async fn all_path((all,): (String,), _req: Request) -> Responder {
+    Ok((Response::builder(), Bytes::from(format!("All String: {}", all))))
+}
+
 #[get("/**")]
 async fn notfound((): (), _req: Request) -> Responder {
     Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
@@ -42,6 +52,8 @@ async fn main() -> Result<(), ChiteyError> {
     .service(greet)
     .service(greet_not_number)
     .service(home)
+    .service(all_all_path)
+    .service(all_path)
     .service(notfound)
     .service(notfoundpost)
     .run()
