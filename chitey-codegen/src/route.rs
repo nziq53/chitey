@@ -521,7 +521,6 @@ impl ToTokens for Route {
             {
                 #[inline]
                 fn register(&self) -> ::chitey::Resource {
-                    #[allow(unused_variables)]
                     #registrations
                 }
                 #[inline]
@@ -538,6 +537,7 @@ impl ToTokens for Route {
                     return true;
                 }
                 async fn handler_func(&self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
+                    #[allow(unused_variables)]
                     #ast
                     let __chitey_url_ptn_result = match self.register().get_rdef().exec(url) {
                         Ok(v) => match v {
