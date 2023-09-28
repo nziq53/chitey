@@ -13,7 +13,7 @@ use crate::{server::{util::{get_certs_and_key, process_result}, http_server::{la
 
 #[derive(Clone)]
 pub struct Factories {
-    pub(crate) factories: Vec<(Resource, Arc<Mutex<Pin<Box<dyn HttpServiceFactory + 'static + Send + Sync>>>>)>,
+    pub(crate) factories: Vec<(Arc<Resource>, Arc<Mutex<Pin<Box<dyn HttpServiceFactory + 'static + Send + Sync>>>>)>,
 }
 unsafe impl Send for Factories {}
 unsafe impl Sync for Factories {}
@@ -110,8 +110,8 @@ impl WebServer
         for factory in self.factories {
             let (res, fact) = factory;
             let fac = Arc::new(Mutex::new(fact));
-            factories.push((res.clone(), fac.clone()));
-            factories2.push((res, fac.clone()));
+            factories.push((Arc::new(res.clone()), fac.clone()));
+            factories2.push((Arc::new(res), fac.clone()));
         }
         let factories = Factories{ factories };
         let factories2 = Factories{ factories: factories2 };
@@ -142,9 +142,9 @@ impl WebServer
             }
             });
             let (_, _, _) = tokio::join!(
-            handle_http,
-            handle_https,
-            handle_http3,
+                handle_http,
+                handle_https,
+                handle_http3,
             );
         };
 
