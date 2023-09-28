@@ -39,4 +39,9 @@ async-trait.workspace = true
 tokio.workspace = true
 urlpattern.workspace = true
 thiserror = "1.0"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = "0.3"
+
+[target.'cfg(not(target_os = "windows"))'.dependencies]
 nix = { version = "0.27", features = ["signal", "process"] }
