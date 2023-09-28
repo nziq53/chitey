@@ -1,9 +1,9 @@
-use chitey::{get, Responder, WebServer, post, Certs};
+use chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError};
 use bytes::Bytes;
 use http::Response;
 
 #[get("/hello/:name")]
-async fn greet(name: String) -> Responder {
+async fn greet((name,): (String,), _req: Request) -> Responder {
     println!("Hello {name}!");
 
     let builder = Response::builder();
@@ -12,7 +12,16 @@ async fn greet(name: String) -> Responder {
 }
 
 #[get("/:id/:name")]
-async fn doubb((id, name): (u32, String)) -> Responder {
+async fn doubb((id, name): (u32, String), _req: Request) -> Responder {
+    let ret = format!("Hello {}! id:{}", name, id);
+
+    let builder = Response::builder();
+    let ret = Bytes::from(ret);
+    Ok((builder, ret))
+}
+
+#[post("/:id/:name")]
+async fn dd((id, name): (u32, String), _req: Request) -> Responder {
     format!("Hello {}! id:{}", name, id);
 
     let builder = Response::builder();
@@ -20,9 +29,8 @@ async fn doubb((id, name): (u32, String)) -> Responder {
     Ok((builder, ret))
 }
 
-#[post("/:id/:name")]
-async fn dd((id, name): (u32, String)) -> Responder {
-    format!("Hello {}! id:{}", name, id);
+#[get("/")]
+async fn home((): (), _req: Request) -> Responder {
 
     let builder = Response::builder();
     let ret = Bytes::copy_from_slice(b"source");
@@ -30,7 +38,7 @@ async fn dd((id, name): (u32, String)) -> Responder {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), ChiteyError> {
     println!("Hello, world!");
     WebServer::new()
     .bind("localhost:18080").unwrap()
@@ -38,6 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .tls(Certs { cert: "server.cert".into(), key: "server.key".into() })
     .service(greet)
     .service(doubb)
+    .service(dd)
+    .service(home)
     .run()
     .await
 }

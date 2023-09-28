@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, ToTokens, TokenStreamExt};
-use syn::{punctuated::Punctuated, Ident, LitStr, Path, Token};
+use syn::{punctuated::Punctuated, Ident, LitStr, Path, Token, PatType, parse_quote, Pat, FnArg};
 
 #[derive(Debug)]
 pub struct RouteArgs {
@@ -29,8 +29,8 @@ impl syn::parse::Parse for RouteArgs {
         // ##################
 
         // let _ = ResourceDef::new(path.value());
-        println!("{:?}", path.value());
-        println!("{:?}", path);
+        // println!("{:?}", path.value());
+        // println!("{:?}", path);
 
         // ##################
 
@@ -418,7 +418,7 @@ impl ToTokens for Route {
             args,
             doc_attributes,
         } = self;
-
+        
         let registrations: TokenStream2 = args
             .iter()
             .map(|args| {
@@ -451,10 +451,12 @@ impl ToTokens for Route {
                     }
                 };
 
+                // let custom_name = Ident::new(&custom_sig, name.span());
                 quote! {
-                    let mut __resource = ::chitey::Resource::new(#path).regist(#name)
+                    let __resource = ::chitey::Resource::new(#path)
                     .name(#resource_name)
                     #method_guards;
+                    return __resource;
                 }
                 // return __resource;
                 // let __resource = ::chitey::Resource::new(#path)
@@ -467,15 +469,67 @@ impl ToTokens for Route {
             })
             .collect();
 
+        // let mut ast_custom = ast.clone();
+        // ast_custom.sig.ident = Ident::new("handler_func", ast.sig.ident.span());
+
+        // let self_arg = parse_quote! { &self };
+        // ast_custom.sig.inputs.insert(0, self_arg);
+        // let _ = ast_custom.sig.generics.params.push(parse_quote!{ HttpServiceFactoryType });
+        // let _ = ast_custom.sig.generics.where_clause = Some(parse_quote!{ where HttpServiceFactoryType: ::chitey::Tuple + 'static });
+        // println!("{:?}", ast_custom.sig);
+        let mut tuple_idents: Vec<String> = Vec::new();
+        let mut tuples = None;
+        if let FnArg::Typed(mut tuple_wrap) = ast.sig.inputs[0].clone() {
+            if let Pat::Tuple(pat) = tuple_wrap.pat.as_mut() {
+                tuples = Some(pat.clone());
+                for pat in &pat.elems {
+                    if let Pat::Ident(ident) = pat{
+                        tuple_idents.push(ident.ident.to_string());
+                        // println!("{:?}", ident.ident.to_string());
+                    }
+                }
+            }
+        }
+        let mut to_tuple_quotes = quote!{};
+        for ident in tuple_idents {
+            let ident_name = Ident::new(&ident, Span::call_site());
+            let to_tuple_quote = quote! {
+                let #ident_name = match url_ptn_result.pathname.groups.get(#ident) {
+                    Some(v) => match v.clone().parse() {
+                        Ok(v) => v,
+                        Err(e) => return Err(::chitey::ChiteyError::UrlPatternError),
+                    },
+                    None => return Err(::chitey::ChiteyError::UrlPatternError),
+                };
+            };
+            to_tuple_quotes.extend(to_tuple_quote);
+        }
+        // let block = *ast_custom.block.as_mut();
+        // block.stmts
         let stream = quote! {
             #(#doc_attributes)*
             #[allow(non_camel_case_types, missing_docs)]
             pub struct #name;
 
-            impl ::chitey::HttpServiceFactory for #name {
-                fn register(&self) {
-                    #ast
+            #[::chitey::async_trait]
+            impl ::chitey::HttpServiceFactory for #name
+            {
+                fn register(&self) -> ::chitey::Resource {
                     #registrations
+                }
+                async fn handler_func(&self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
+                    #ast
+                    let res = self.register();
+                    let pattern = res.get_rdef();
+                    let url_ptn_result = match pattern.exec(url) {
+                        Ok(v) => match v {
+                            Some(v) => v,
+                            None => return Err(::chitey::ChiteyError::UrlPatternError),
+                        },
+                        Err(_) => return Err(::chitey::ChiteyError::UrlPatternError),
+                    };
+                    #to_tuple_quotes
+                    return #name(#tuples, req).await;
                 }
             }
         };

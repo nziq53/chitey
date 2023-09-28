@@ -1,46 +1,35 @@
 use std::{error::Error, future::Future, pin::Pin};
-pub type Responder = Result<(http::response::Builder, bytes::Bytes), Box<dyn Error>>;
+pub type Responder = Result<(http::response::Builder, bytes::Bytes), ChiteyError>;
 
+use http::Request;
+use hyper::Body;
 use urlpattern::{UrlPattern, UrlPatternInit};
 
-use crate::guard::Guard;
+use crate::{guard::Guard, tuple::{TupleAppend, Tuple, Path}, fn_service, web_server::{self, ChiteyError}};
 
-// type Task<T: Future<Output = Responder> + Send, U> = fn(U) -> T;
-type Task<T, U> = fn(U) -> T;
-
-pub struct Resource<T: Future<Output = Responder> + Send, U> {
-    rdef: UrlPattern,
-    name: Option<String>,
-    register: Option<Task<T, U>>,
-    guard: Guard,
+#[derive(Debug)]
+pub struct Resource {
+    pub(crate) rdef: UrlPattern,
+    pub(crate) url_ptn: String,
+    pub(crate) name: Option<String>,
+    pub(crate) guard: Guard,
 }
 
-// pub struct BoxedResource {
-//     resource: Pin<Box<Resource<T, U>>>,
-// }
-
-impl<T, U> Resource<T, U>
-where
-    T: Future<Output = Responder> + Send,
-{
+impl Resource {
     /// Constructs new resource that matches a `path` pattern.
     pub fn new(path: &str) -> Self {
-        let path = <UrlPattern>::parse(UrlPatternInit {
+        let ptn = <UrlPattern>::parse(UrlPatternInit {
             pathname: Some(path.to_owned()),
             ..Default::default()
         })
         .unwrap();
 
         Resource {
-            rdef: path,
+            rdef: ptn,
+            url_ptn: path.to_string(),
             name: None,
-            register: None,
             guard: Guard::Get,
         }
-    }
-    pub fn regist(mut self, handler: Task<T, U>) -> Self {
-        self.register = Some(handler);
-        self
     }
     pub fn name(mut self, nm: &str) -> Self {
         self.name = Some(nm.to_string());
@@ -50,6 +39,17 @@ where
         self.guard = g;
         self
     }
+    pub fn get_rdef(self) -> UrlPattern {
+        self.rdef
+    }
 }
 
-pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T>>>;
+impl Clone for Resource {
+    fn clone(&self) -> Self {
+        Self { rdef: <UrlPattern>::parse(UrlPatternInit {
+            pathname: Some(self.url_ptn.clone().to_owned()),
+            ..Default::default()
+        })
+        .unwrap(), url_ptn: self.url_ptn.clone(), name: self.name.clone(), guard: self.guard.clone() }
+    }
+}

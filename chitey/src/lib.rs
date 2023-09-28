@@ -31,7 +31,13 @@ macro_rules! router_reexport {
 pub use chitey_server::guard::Guard;
 pub use chitey_server::resource::Resource;
 pub use chitey_server::resource::Responder;
+pub use chitey_server::web_server::Request;
 pub use chitey_server::server::util::TlsCertsKey;
 pub use chitey_server::web_server::Certs;
 pub use chitey_server::web_server::HttpServiceFactory;
 pub use chitey_server::web_server::WebServer;
+pub use async_trait::async_trait;
+pub use chitey_server::tuple::Path;
+pub use chitey_server::tuple::Tuple;
+pub use chitey_server::web_server::ChiteyError;
+pub use urlpattern::UrlPatternMatchInput;

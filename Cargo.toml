@@ -14,4 +14,17 @@ exclude = []
 [workspace.package]
 license = "MIT"
 edition = "2021"
-rust-version = "1.72"
+rust-version = "1.64"
+
+[workspace.dependencies]
+async-trait = "0.1"
+tokio = { version = "1.32", features = [
+  "rt-multi-thread",
+  "macros",
+  "io-util",
+  "io-std",
+  "fs",
+  "time",
+  "full",
+] }
+urlpattern = "0.2"

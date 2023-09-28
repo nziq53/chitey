@@ -1,9 +1,9 @@
-use std::{sync::{self, Arc}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
+use std::{sync::{self, Arc, RwLock, Mutex}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
 
-use crate::response::response::handle_request_get;
+use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError, HttpServiceFactory}, guard::Guard};
 
-use super::util::{TlsCertsKey, CustomOption};
-use bytes::{BytesMut, BufMut};
+use super::util::{TlsCertsKey};
+use bytes::{BytesMut, BufMut, Bytes};
 use futures_util::{ready, Future, TryStreamExt};
 use http::{Request, Response, StatusCode, Method};
 use hyper::{server::{conn::{AddrIncoming, AddrStream}, accept::Accept}, service::{make_service_fn, service_fn}, Server, Body};
@@ -25,7 +25,7 @@ pub struct HttpsServerOpt {
   pub listen: SocketAddr,
 }
 
-pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: HttpsServerOpt, factories: Arc<RwLock<Factories>>) -> Result<(), ChiteyError> {
   let TlsCertsKey{certs, key} = tls_cert_key;
   let HttpsServerOpt{listen} = https_server_opt;
 
@@ -43,17 +43,25 @@ pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: H
 
   let incoming = AddrIncoming::bind(&listen)
     .map_err(|e| error(format!("Incoming failed: {:?}", e))).expect("error");
-  let service = make_service_fn(|_| async { Ok::<_, Infallible>(service_fn(handle_https_service))});
-  let https_server = Server::builder(HyperAcceptor::new(tls_config, incoming)).serve(service);
+  let make_service = make_service_fn(move |_| {
+    let factories = factories.clone();
+    let service = service_fn(move |req| {
+      handle_https_service(req, factories.clone())
+    });
+
+    async move { Ok::<_, Infallible>(service) }
+  });
+  let https_server = Server::builder(HyperAcceptor::new(tls_config, incoming)).serve(make_service);
 
   // Prepare a long-running future stream to accept and serve clients.
 
   // handle incoming connections and requests
 
   println!("Starting to serve on https://{}.", listen);
-  let _ = https_server.await?;
-
-  Ok(())
+  match https_server.await {
+    Ok(_) => Ok(()),
+    Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+  }
 }
 
 pub struct HyperAcceptor {
@@ -162,62 +170,72 @@ impl Accept for HyperAcceptor {
   }
 }
 
-async fn handle_https_service(req: Request<Body>) -> Result<Response<Body>, http::Error> {
+async fn handle_https_service(mut req: Request<Body>, factories: Arc<RwLock<Factories>>) -> Result<Response<Body>, ChiteyError> {
   if req.uri().path().contains("..") {
     let builder = Response::builder()
       .header("Alt-Svc", "h3=\":443\"; ma=2592000")
       .status(StatusCode::NOT_FOUND);
-    return builder.body(Body::empty());
+    return match builder.body(Body::empty()) {
+        Ok(v) => Ok(v),
+        Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+    }
   }
 
-  info!("{:?}", req.method());
+  let url = req.uri().to_string().parse().unwrap();
+  let input = UrlPatternMatchInput::Url(url);
+  {
+    let method = req.method().clone();
+    let req_contain_key = req.headers().contains_key("Another-Header");
+    let factories = {
+      factories.read().unwrap().factories.clone()
+    };
+    for (res, factory) in factories {
+      // GET
+      if res.guard == Guard::Get && method == Method::GET {
+        if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
+          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+            Ok((mut resp, body)) => {
+              if req_contain_key {
+                resp = resp.header("Another-Header", "Ack");
+              }
+              match resp.body(Body::from(body)) {
+                  Ok(v) => Ok(v),
+                  Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+              }
+            },
+            Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+          }
+        };
+      }
+
+      // POST
+      if res.guard == Guard::Post && method == Method::POST {
+        if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
+          return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+            Ok((mut resp, body)) => {
+              if req_contain_key {
+                resp = resp.header("Another-Header", "Ack");
+              }
+              match resp.body(Body::from(body)) {
+                  Ok(v) => Ok(v),
+                  Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+              }
+            },
+            Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
+          }
+        };
+      }
+    }
+  }
 
   let builder = Response::builder()
-  .header("Alt-Svc", "h3=\":443\"; ma=2592000")
-  .status(StatusCode::NOT_FOUND);
-
-  if req.method() == Method::GET {
-    let (mut resp, body) = handle_request_get(&req, false).await?;
-    resp = resp.header("Alt-Svc", "h3=\":443\"; ma=2592000");
-    if req.headers().contains_key("Another-Header") {
-        resp = resp.header("Another-Header", "Ack");
-    }
-    resp.body(Body::from(body))
-  } else if req.method() == Method::POST {
-    let init1 = UrlPatternInit {
-      pathname: Some("/upload/:id/*".to_owned()),
-      ..Default::default()
-    };
-    let init2 = UrlPatternInit {
-      pathname: Some("/upload/:id".to_owned()),
-      ..Default::default()
-    };
-    let init3 = UrlPatternInit {
-      pathname: Some("/profile/:id".to_owned()),
-      ..Default::default()
-    };
-    
-    let pattern1 = <UrlPattern>::parse(init1).unwrap();
-    let pattern2 = <UrlPattern>::parse(init2).unwrap();
-    let pattern3 = <UrlPattern>::parse(init3).unwrap();
-    let url = req.uri().to_string().parse().unwrap();
-    let input = UrlPatternMatchInput::Url(url);
-    // let result = pattern.exec(UrlPatternMatchInput::Url(url)).unwrap().unwrap();
-    if let Ok(Some(result)) = pattern1.exec(input.clone()){
-      return process_upload(result.pathname.groups.get("id").unwrap().to_string(), builder, req).await;
-    }else if let Ok(Some(result)) = pattern2.exec(input.clone()){
-      println!("uploadID: {}",result.pathname.groups.get("id").unwrap());
-    }else if let Ok(Some(result)) = pattern3.exec(input.clone()){
-      println!("profileID: {}",result.pathname.groups.get("id").unwrap());
-    }else{
-      println!("** error **");
-    }
-    return builder.body(Body::from(""));
-  } else {
-    let builder = Response::builder()
-      .header("Alt-Svc", "h3=\":443\"; ma=2592000")
-      .status(StatusCode::NOT_FOUND);
-    builder.body(Body::empty())
+    .header("Alt-Svc", "h3=\":443\"; ma=2592000")
+    .status(StatusCode::NOT_FOUND);
+  
+  match builder.body(Body::from(Bytes::copy_from_slice(b"page not found"))) {
+    // match builder.body(Body::empty()) {
+    Ok(v) => Ok(v),
+    Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
   }
 }
 
@@ -242,7 +260,7 @@ async fn process_upload(id:String, builder:http::response::Builder, req: Request
   if mime_type.essence_str() != "multipart/form-data" {
       return builder.body(Body::from(""));
   }
-  let a = parse_mpart(req,mime_type).await;
+  let a = parse_mpart(req, mime_type).await;
   dbg!(&a);
   return builder.status(StatusCode::OK).body(Body::from(format!("uploadID: {}",id)));
 }

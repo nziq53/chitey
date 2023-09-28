@@ -14,12 +14,14 @@ use h3::server::RequestStream;
 use http::Method;
 use http::Request;
 use http::StatusCode;
+use hyper::Body;
 use tracing::{error, info, trace_span};
 
 use crate::response::response::handle_request_get;
 use crate::server::http3_stream_wrapper::StreamWrapper;
+use crate::web_server::Factories;
 
-use super::util::CustomOption;
+
 use super::util::TlsCertsKey;
 
 #[derive(Clone)]
@@ -30,6 +32,7 @@ pub struct Http3ServerOpt {
 pub async fn launch_http3_server(
     tls_cert_key: TlsCertsKey,
     http3_server_opt: Http3ServerOpt,
+    factories: Factories,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let TlsCertsKey { certs, key } = tls_cert_key;
     let Http3ServerOpt { listen } = http3_server_opt;
@@ -169,10 +172,12 @@ where
         //   info!("{:?}", post_data.chunk());
         // }
         let stm: StreamWrapper<T> = StreamWrapper::new(recv_stream);
+        let mut req = req.map(|_| Body::wrap_stream(stm));
+            let (re, b)  = req.into_parts();
 
         let mut multipart_stream = mpart_async::server::MultipartStream::new(
             boundary,
-            stm.map_ok(|buf| {
+            b.map_ok(|buf| {
                 let mut ret = BytesMut::with_capacity(buf.remaining());
                 ret.put(buf);
                 ret.freeze()
