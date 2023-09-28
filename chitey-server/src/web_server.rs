@@ -13,7 +13,7 @@ use crate::{server::{util::{get_certs_and_key, process_result}, http_server::{la
 
 #[derive(Clone)]
 pub struct Factories {
-    pub(crate) factories: Vec<(Resource, Arc<Mutex<Box<dyn HttpServiceFactory + 'static + Send + Sync>>>)>,
+    pub(crate) factories: Vec<(Resource, Arc<Mutex<Pin<Box<dyn HttpServiceFactory + 'static + Send + Sync>>>>)>,
 }
 unsafe impl Send for Factories {}
 unsafe impl Sync for Factories {}
@@ -28,7 +28,7 @@ pub struct Certs {
 pub trait HttpServiceFactory: Sync
 {
     fn register(&self) -> Resource;
-    async fn handler_func(self, url: UrlPatternMatchInput, req: Request) -> Responder;
+    async fn handler_func(&self, url: UrlPatternMatchInput, req: Request) -> Responder;
 }
 
 pub struct WebServer {
@@ -36,7 +36,7 @@ pub struct WebServer {
     listen: SocketAddr,
     tls_listen: SocketAddr,
     redirect: Option<String>,
-    factories: Vec<(Resource, Box<dyn HttpServiceFactory + 'static + Send + Sync>)>,
+    factories: Vec<(Resource, Pin<Box<dyn HttpServiceFactory + 'static + Send + Sync>>)>,
 }
 
 impl WebServer
@@ -57,7 +57,7 @@ impl WebServer
         F: HttpServiceFactory + 'static + Send + Sync,
     {
         let resource = factory.register();
-        self.factories.push((resource, Box::new(factory)));
+        self.factories.push((resource, Box::pin(factory)));
         self
     }
 

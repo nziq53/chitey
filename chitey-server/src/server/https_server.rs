@@ -1,6 +1,6 @@
-use std::{sync::{self, Arc, RwLock}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
+use std::{sync::{self, Arc, RwLock, Mutex}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
 
-use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError}, guard::Guard};
+use crate::{response::response::handle_request_get, web_server::{Factories, ChiteyError, HttpServiceFactory}, guard::Guard};
 
 use super::util::{TlsCertsKey};
 use bytes::{BytesMut, BufMut};
@@ -60,7 +60,7 @@ pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: H
   println!("Starting to serve on https://{}.", listen);
   match https_server.await {
     Ok(_) => Ok(()),
-    Err(_) => Err(ChiteyError::InternalServerError),
+    Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
   }
 }
 
@@ -177,82 +177,65 @@ async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factorie
       .status(StatusCode::NOT_FOUND);
     return match builder.body(Body::empty()) {
         Ok(v) => Ok(v),
-        Err(_) => Err(ChiteyError::InternalServerError),
+        Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
     }
   }
-
-  info!("{:?}", req.method());
-
-  let builder = Response::builder()
-  .header("Alt-Svc", "h3=\":443\"; ma=2592000")
-  .status(StatusCode::NOT_FOUND);
 
   let url = req.uri().to_string().parse().unwrap();
   let input = UrlPatternMatchInput::Url(url);
   {
-    let reader = factories.read().unwrap();
-    for (res, factory) in &reader.factories {
-      if res.guard == Guard::Get && req.method() == Method::GET {
-        if let Ok(Some(result)) = res.rdef.exec(input.clone()) {
-          match factory.get_mut().handler_func(input, (req.map(|b| { () }), false)).await {
+    let method = req.method().clone();
+    let req_contain_key = req.headers().contains_key("Another-Header");
+    let req = req.map(|_b| { () });
+    let factories = {
+      factories.read().unwrap().factories.clone()
+    };
+    for (res, factory) in factories {
+      // GET
+      if res.guard == Guard::Get && method == Method::GET {
+        if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
+          let lock = factory.lock().await;
+          match lock.handler_func(input.clone(), (req, false)).await {
             Ok((mut resp, body)) => {
-              if req.headers().contains_key("Another-Header") {
+              if req_contain_key {
                 resp = resp.header("Another-Header", "Ack");
-                match resp.body(Body::from(body)) {
-                    Ok(v) => return Ok(v),
-                    Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
-                }
+              }
+              match resp.body(Body::from(body)) {
+                  Ok(v) => return Ok(v),
+                  Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
               }
             },
             Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
           }
         };
       }
+      
+      // POST
+      // if res.guard == Guard::Post && method == Method::POST {
+      //   if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
+      //     match factory.lock().await.handler_func(input.clone(), (req, false)).await {
+      //       Ok((mut resp, body)) => {
+      //         if req_contain_key {
+      //           resp = resp.header("Another-Header", "Ack");
+      //         }
+      //         match resp.body(Body::from(body)) {
+      //             Ok(v) => return Ok(v),
+      //             Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
+      //         }
+      //       },
+      //       Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
+      //     }
+      //   };
+      // }
     }
   }
 
-  if req.method() == Method::GET {
-    let (mut resp, body) = handle_request_get(&req, false).await;
-    resp = resp.header("Alt-Svc", "h3=\":443\"; ma=2592000");
-    if req.headers().contains_key("Another-Header") {
-        resp = resp.header("Another-Header", "Ack");
-    }
-    resp.body(Body::from(body))
-  } else if req.method() == Method::POST {
-    let init1 = UrlPatternInit {
-      pathname: Some("/upload/:id/*".to_owned()),
-      ..Default::default()
-    };
-    let init2 = UrlPatternInit {
-      pathname: Some("/upload/:id".to_owned()),
-      ..Default::default()
-    };
-    let init3 = UrlPatternInit {
-      pathname: Some("/profile/:id".to_owned()),
-      ..Default::default()
-    };
-    
-    let pattern1 = <UrlPattern>::parse(init1).unwrap();
-    let pattern2 = <UrlPattern>::parse(init2).unwrap();
-    let pattern3 = <UrlPattern>::parse(init3).unwrap();
-    let url = req.uri().to_string().parse().unwrap();
-    let input = UrlPatternMatchInput::Url(url);
-    // let result = pattern.exec(UrlPatternMatchInput::Url(url)).unwrap().unwrap();
-    if let Ok(Some(result)) = pattern1.exec(input.clone()){
-      return process_upload(result.pathname.groups.get("id").unwrap().to_string(), builder, req).await;
-    }else if let Ok(Some(result)) = pattern2.exec(input.clone()){
-      println!("uploadID: {}",result.pathname.groups.get("id").unwrap());
-    }else if let Ok(Some(result)) = pattern3.exec(input.clone()){
-      println!("profileID: {}",result.pathname.groups.get("id").unwrap());
-    }else{
-      println!("** error **");
-    }
-    return builder.body(Body::from(""));
-  } else {
-    let builder = Response::builder()
-      .header("Alt-Svc", "h3=\":443\"; ma=2592000")
-      .status(StatusCode::NOT_FOUND);
-    builder.body(Body::empty())
+  let builder = Response::builder()
+    .header("Alt-Svc", "h3=\":443\"; ma=2592000")
+    .status(StatusCode::NOT_FOUND);
+  match builder.body(Body::empty()) {
+    Ok(v) => Ok(v),
+    Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
   }
 }
 

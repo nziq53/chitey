@@ -517,7 +517,7 @@ impl ToTokens for Route {
                 fn register(&self) -> ::chitey::Resource {
                     #registrations
                 }
-                async fn handler_func(self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
+                async fn handler_func(&self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
                     #ast
                     let res = self.register();
                     let pattern = res.get_rdef();
