@@ -161,41 +161,45 @@ where
         // GET
         if res.guard == Guard::Get && method == Method::GET {
           if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-            return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
-              Ok((mut resp, body)) => {
-                if req_contain_key {
-                  resp = resp.header("Another-Header", "Ack");
+            let factory_loc = factory.lock().await;
+            if factory_loc.analyze_types(input.clone()) {
+                return match factory_loc.handler_func(input.clone(), (req, false)).await {
+                  Ok((mut resp, body)) => {
+                    if req_contain_key {
+                      resp = resp.header("Another-Header", "Ack");
+                    }
+                    send_stream.send_response(resp.body(()).unwrap()).await;
+                    send_stream.send_data(body).await;
+                    match send_stream.finish().await {
+                        Ok(_) => Ok(()),
+                        Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
+                    }
+                  },
+                  Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
                 }
-                send_stream.send_response(resp.body(()).unwrap()).await;
-                send_stream.send_data(body).await;
-                match send_stream.finish().await {
-                    Ok(_) => Ok(()),
-                    Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
-                }
-              },
-              Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
             }
           };
         }
   
         // POST
         if res.guard == Guard::Post && method == Method::POST {
-          if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-            return match factory.lock().await.handler_func(input.clone(), (req, false)).await {
-              Ok((mut resp, body)) => {
-                if req_contain_key {
-                  resp = resp.header("Another-Header", "Ack");
+            let factory_loc = factory.lock().await;
+            if factory_loc.analyze_types(input.clone()) {
+                return match factory_loc.handler_func(input.clone(), (req, false)).await {
+                  Ok((mut resp, body)) => {
+                    if req_contain_key {
+                      resp = resp.header("Another-Header", "Ack");
+                    }
+                    send_stream.send_response(resp.body(()).unwrap()).await;
+                    send_stream.send_data(body).await;
+                    match send_stream.finish().await {
+                        Ok(_) => Ok(()),
+                        Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
+                    }
+                  },
+                  Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
                 }
-                send_stream.send_response(resp.body(()).unwrap()).await;
-                send_stream.send_data(body).await;
-                match send_stream.finish().await {
-                    Ok(_) => Ok(()),
-                    Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
-                }
-              },
-              Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
             }
-          };
         }
       }
 

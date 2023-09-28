@@ -19,15 +19,6 @@ codegen_reexport!(post);
 // codegen_reexport!(connect);
 // codegen_reexport!(options);
 
-macro_rules! router_reexport {
-    ($name:ident) => {
-        pub use chitey_router::resource::$name;
-    };
-}
-// router_reexport!(Resource);
-// router_reexport!(HttpServiceFactory);
-// router_reexport!(HandleRegister);
-// router_reexport!(Responder);
 pub use chitey_server::guard::Guard;
 pub use chitey_server::resource::Resource;
 pub use chitey_server::resource::Responder;

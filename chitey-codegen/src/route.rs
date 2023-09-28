@@ -485,13 +485,12 @@ impl ToTokens for Route {
                 for pat in &pat.elems {
                     if let Pat::Ident(ident) = pat{
                         tuple_idents.push(ident.ident.to_string());
-                        // println!("{:?}", ident.ident.to_string());
                     }
                 }
             }
         }
         let mut to_tuple_quotes = quote!{};
-        for ident in tuple_idents {
+        for ident in tuple_idents.clone() {
             let ident_name = Ident::new(&ident, Span::call_site());
             let to_tuple_quote = quote! {
                 let #ident_name = match url_ptn_result.pathname.groups.get(#ident) {
@@ -504,6 +503,22 @@ impl ToTokens for Route {
             };
             to_tuple_quotes.extend(to_tuple_quote);
         }
+        
+        let mut to_tuple_quotes_bool = quote!{};
+        for ident in tuple_idents {
+            let ident_name = Ident::new(&ident, Span::call_site());
+            let to_tuple_quote: TokenStream2 = quote! {
+                let #ident_name = match url_ptn_result.pathname.groups.get(#ident) {
+                    Some(v) => match v.clone().parse() {
+                        Ok(v) => v,
+                        Err(e) => return false,
+                    },
+                    None => return false,
+                };
+            };
+            to_tuple_quotes_bool.extend(to_tuple_quote);
+        }
+        let tuple_types  = ast.sig.inputs[0].clone();
         // let block = *ast_custom.block.as_mut();
         // block.stmts
         let stream = quote! {
@@ -514,13 +529,27 @@ impl ToTokens for Route {
             #[::chitey::async_trait]
             impl ::chitey::HttpServiceFactory for #name
             {
+                // #[inline]
                 fn register(&self) -> ::chitey::Resource {
                     #registrations
                 }
+                // #[inline]
+                fn analyze_types(&self, url: ::chitey::UrlPatternMatchInput) -> bool {
+                    let pattern = self.register().get_rdef();
+                    let url_ptn_result = match pattern.exec(url) {
+                        Ok(v) => match v {
+                            Some(v) => v,
+                            None => return false,
+                        },
+                        Err(_) => return false,
+                    };
+                    #to_tuple_quotes_bool
+                    let #tuple_types = #tuples;
+                    return true;
+                }
                 async fn handler_func(&self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
                     #ast
-                    let res = self.register();
-                    let pattern = res.get_rdef();
+                    let pattern = self.register().get_rdef();
                     let url_ptn_result = match pattern.exec(url) {
                         Ok(v) => match v {
                             Some(v) => v,

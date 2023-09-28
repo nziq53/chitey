@@ -28,6 +28,7 @@ pub struct Certs {
 pub trait HttpServiceFactory: Sync
 {
     fn register(&self) -> Resource;
+    fn analyze_types(&self, url: UrlPatternMatchInput) -> bool;
     async fn handler_func(&self, url: UrlPatternMatchInput, req: Request) -> Responder;
 }
 
