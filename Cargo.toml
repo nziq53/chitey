@@ -2,20 +2,14 @@
 
 [workspace]
 resolver = "2"
-members = [
-  "chitey",
-  "chitey-codegen",
-  "chitey-router",
-  "chitey-server",
-  "examples",
-]
-exclude = []
+members = ["chitey", "chitey-codegen", "chitey-router", "chitey-server"]
+exclude = ["examples"]
 
 [workspace.package]
 license = "MIT"
 edition = "2021"
 rust-version = "1.64"
-version = "0.2.0"
+version = "0.2.1"
 
 [workspace.dependencies]
 async-trait = "0.1"
