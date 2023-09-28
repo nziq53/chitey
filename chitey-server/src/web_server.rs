@@ -94,8 +94,8 @@ impl WebServer
         Ok(self)
     }
 
-    pub fn redirect<U: std::ops::Deref<Target=String>>(mut self, url: U) -> Self {
-        self.redirect = Some(url.as_str().to_string());
+    pub fn redirect<U: std::ops::Deref<Target=str>>(mut self, url: U) -> Self {
+        self.redirect = Some(url.to_string());
         self
     }
 
