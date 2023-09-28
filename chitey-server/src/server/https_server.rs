@@ -170,12 +170,15 @@ impl Accept for HyperAcceptor {
   }
 }
 
-async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factories>>) -> Result<Response<Body>, http::Error> {
+async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factories>>) -> Result<Response<Body>, ChiteyError> {
   if req.uri().path().contains("..") {
     let builder = Response::builder()
       .header("Alt-Svc", "h3=\":443\"; ma=2592000")
       .status(StatusCode::NOT_FOUND);
-    return builder.body(Body::empty());
+    return match builder.body(Body::empty()) {
+        Ok(v) => Ok(v),
+        Err(_) => Err(ChiteyError::InternalServerError),
+    }
   }
 
   info!("{:?}", req.method());
@@ -186,17 +189,30 @@ async fn handle_https_service(req: Request<Body>, factories: Arc<RwLock<Factorie
 
   let url = req.uri().to_string().parse().unwrap();
   let input = UrlPatternMatchInput::Url(url);
-  // let reader = factories.read().unwrap();
-  // for (res, factory) in &reader.factories {
-  //   if res.guard == Guard::Get && req.method() == Method::GET {
-  //     if let Ok(Some(result)) = res.rdef.exec(input.clone()) {
-  //       // return factory.get_mut().handler_func(url, req).await
-  //     };
-  //   }
-  // }
+  {
+    let reader = factories.read().unwrap();
+    for (res, factory) in &reader.factories {
+      if res.guard == Guard::Get && req.method() == Method::GET {
+        if let Ok(Some(result)) = res.rdef.exec(input.clone()) {
+          match factory.get_mut().handler_func(input, (req.map(|b| { () }), false)).await {
+            Ok((mut resp, body)) => {
+              if req.headers().contains_key("Another-Header") {
+                resp = resp.header("Another-Header", "Ack");
+                match resp.body(Body::from(body)) {
+                    Ok(v) => return Ok(v),
+                    Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
+                }
+              }
+            },
+            Err(e) => return Err(ChiteyError::InternalServerError(e.to_string())),
+          }
+        };
+      }
+    }
+  }
 
   if req.method() == Method::GET {
-    let (mut resp, body) = handle_request_get(&req, false).await?;
+    let (mut resp, body) = handle_request_get(&req, false).await;
     resp = resp.header("Alt-Svc", "h3=\":443\"; ma=2592000");
     if req.headers().contains_key("Another-Header") {
         resp = resp.header("Another-Header", "Ack");

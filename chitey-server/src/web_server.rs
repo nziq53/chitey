@@ -118,7 +118,7 @@ impl WebServer
         if let Some(cert) = self.cert {
             let tls_certs_key = match get_certs_and_key(cert) {
                 Ok(v) => v,
-                Err(_) => return Err(ChiteyError::KeyAnalyzeError),
+                Err(e) => return Err(ChiteyError::KeyAnalyzeError(e.to_string())),
             };
             let tls_certs_key2 = tls_certs_key.clone();
             let http_server_opt = HttpServerOpt{ listen: self.listen, redirect: self.redirect };
@@ -162,26 +162,7 @@ pub enum ChiteyError {
     #[error("extract value failed")]
     UrlPatternError,
     #[error("server failed")]
-    InternalServerError,
+    InternalServerError(String),
     #[error("cannot analyze key")]
-    KeyAnalyzeError,
+    KeyAnalyzeError(String),
 }
-
-// async fn handler_func(url: UrlPatternMatchInput, req: Request) -> Responder {
-//     let res: Resource;
-//     let pattern = res.get_rdef();
-//     // if let Ok(Some(result)) = pattern.exec(url) {
-//     //     println!("{}",result.pathname.groups.get("id").unwrap().to_string());
-//     //     // return #name().await;
-//     // };
-    
-//     let url_ptn_result = match pattern.exec(url)? {
-//         Some(v) => v,
-//         None => return Err(Box::new(ChiteyError::UrlPatternError)),
-//     };
-//     let o = match url_ptn_result.pathname.groups.get("") {
-//         Some(v) => v,
-//         None => return Err(Box::new(ChiteyError::UrlPatternError)),
-//     };
-//     return Err(Box::new(ChiteyError::UrlPatternError));
-// }
