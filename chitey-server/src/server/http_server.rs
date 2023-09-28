@@ -18,7 +18,7 @@ where
 
   // 80ポートにhttpアクセスが来た時にリダイレクトしたりするため
   if let Some(redirect) = redirect {
-    println!("redirect to {}", redirect);
+    // println!("redirect to {}", redirect);
     let http_make_service = make_service_fn(move |_conn: &AddrStream| {
         let location = redirect.clone().to_owned();
         let service = service_fn(move |req| {

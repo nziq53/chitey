@@ -25,7 +25,6 @@ bytes = "1"
 mime = "0.3"
 rustls = { version = "0.21" }
 futures-util = "0.3"
-tracing = "0.1"
 tokio-rustls = "0.24"
 quinn = { version = "0.10", default-features = false, features = [
   "runtime-tokio",

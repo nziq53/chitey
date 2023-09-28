@@ -8,7 +8,7 @@ use http::Method;
 use http::Request;
 use http::StatusCode;
 use hyper::Body;
-use tracing::{error, info, trace_span};
+// use tracing::{error, info, trace_span};
 use urlpattern::UrlPatternMatchInput;
 
 use crate::guard::Guard;
@@ -51,14 +51,14 @@ pub async fn launch_http3_server(
 
     while let Some(new_conn) = endpoint.accept().await {
         #[cfg(debug_assertions)]
-        trace_span!("New connection being attempted");
+        // trace_span!("New connection being attempted");
 
         let factories = factories.clone();
         tokio::spawn(async move {
             match new_conn.await {
                 Ok(conn) => {
-                    #[cfg(debug_assertions)]
-                    info!("new connection established");
+                    // #[cfg(debug_assertions)]
+                    // info!("new connection established");
 
                     let mut h3_conn = h3::server::Connection::new(h3_quinn::Connection::new(conn))
                         .await
@@ -67,8 +67,8 @@ pub async fn launch_http3_server(
                     loop {
                         match h3_conn.accept().await {
                             Ok(Some((req, stream))) => {
-                                #[cfg(debug_assertions)]
-                                info!("new request: {:#?}", req);
+                                // #[cfg(debug_assertions)]
+                                // eprintln!("new request: {:#?}", req);
 
                                 let factories = factories.clone();
                                 tokio::spawn(async move {
@@ -87,7 +87,7 @@ pub async fn launch_http3_server(
 
                             Err(err) => {
                                 #[cfg(debug_assertions)]
-                                error!("error on accept {}", err);
+                                eprintln!("error on accept {}", err);
                                 match err.get_error_level() {
                                     ErrorLevel::ConnectionError => break,
                                     ErrorLevel::StreamError => continue,
@@ -96,9 +96,9 @@ pub async fn launch_http3_server(
                         }
                     }
                 }
-                Err(err) => {
-                    #[cfg(debug_assertions)]
-                    error!("accepting connection failed: {:?}", err);
+                Err(_err) => {
+                    // #[cfg(debug_assertions)]
+                    // eprintln!("accepting connection failed: {:?}", err);
                 }
             }
         });
@@ -123,16 +123,7 @@ where
     if req.uri().path().contains("..") {
         let resp = http::Response::builder().status(StatusCode::NOT_FOUND).body(()).unwrap();
 
-        match stream.send_response(resp).await {
-            Ok(_) => {
-                #[cfg(debug_assertions)]
-                info!("successfully respond to connection");
-            }
-            Err(err) => {
-                #[cfg(debug_assertions)]
-                error!("unable to send response to connection peer: {:?}", err);
-            }
-        }
+        throw_chitey_internal_server_error(stream.send_response(resp).await)?;
         throw_chitey_internal_server_error(stream.send_data(Bytes::copy_from_slice(b"page not found")).await)?;
         throw_chitey_internal_server_error(stream.finish().await)?
     }

@@ -21,7 +21,7 @@ pub fn load_pid() -> u32 {
     let mut contents = String::new();
     file.read_to_string(&mut contents).expect("load failed");
     let pid: u32 = contents.parse().unwrap();
-    println!("{}", pid);
+    // println!("{}", pid);
     pid
 }
 
@@ -68,6 +68,6 @@ pub fn kill_server() -> Result<(), ChiteyError>{
             return Err(ChiteyError::ServerKillError(format!("Failed to kill process: {}", err)));
         }
     }
-    println!("kill success!!");
+    // println!("kill success!!");
     Ok(())
 }

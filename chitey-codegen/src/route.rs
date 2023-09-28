@@ -23,17 +23,6 @@ impl syn::parse::Parse for RouteArgs {
             err
         })?;
 
-        // ##################
-        // verify that path pattern is valid
-        // This must be fix
-        // ##################
-
-        // let _ = ResourceDef::new(path.value());
-        // println!("{:?}", path.value());
-        // println!("{:?}", path);
-
-        // ##################
-
         // if there's no comma, assume that no options are provided
         if !input.peek(Token![,]) {
             return Ok(Self {

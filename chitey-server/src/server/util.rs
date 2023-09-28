@@ -1,7 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use rustls::{Certificate, PrivateKey};
-use tracing::info;
+// use tracing::info;
 
 use crate::web_server::Certs;
 
@@ -21,7 +21,7 @@ pub fn get_certs_and_key(certs: Certs) -> Result<TlsCertsKey, Box<dyn std::error
     let Certs { cert, key } = certs;
 
     if cert.extension().unwrap() == "pem" {
-        info!("cert file is pem file");
+        // info!("cert file is pem file");
         Ok(TlsCertsKey {
             certs: load_certs(cert)?,
             key: load_private_key(key)?,

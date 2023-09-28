@@ -242,7 +242,7 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
 
 //uploadIDを表示させる関数
 pub async fn process_upload(id:String, builder:http::response::Builder, req: Request<Body>) -> Result<Response<Body>, http::Error>{
-    println!("uploadID: {}",id);
+    // println!("uploadID: {}",id);
     let content_type_option = req.headers().get("content-type");
     if content_type_option.is_none() {
         return builder.body(Body::from(""));
@@ -279,18 +279,18 @@ async fn parse_mpart(req: Request<Body>, mime_type: Mime) -> HashMap<String, Str
         if let Ok(_filename) = field.filename() {
         const UPLOAD_DIRNAME: &str = "upload";
         if fs::create_dir_all(UPLOAD_DIRNAME).is_err(){
-            println!("** ディレクトリの作成失敗 **");
+            // println!("** ディレクトリの作成失敗 **");
             continue;
         }      
         let filename = chrono::Utc::now().format("%Y%m%d%H%M%S").to_string();
         let filename = format!("{UPLOAD_DIRNAME}/{filename}.dat");
         let mut writer = BufWriter::new(File::create(&filename).unwrap());
-        let mut bufferlen: i64 = 0;
+        // let mut bufferlen: i64 = 0;
         while let Ok(Some(bytes)) = field.try_next().await {
-            bufferlen += bytes.len() as i64;
+            // bufferlen += bytes.len() as i64;
             writer.write(&bytes).unwrap();
         }
-        println!("{bufferlen}");
+        // println!("{bufferlen}");
         a.insert(name, filename);
         }else{
         let mut buffer = BytesMut::new();
