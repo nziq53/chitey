@@ -70,7 +70,7 @@ pub fn process_result<T, R: std::fmt::Display>(result: Result<T, R>) -> Option<T
     match result {
         Ok(value) => Some(value),
         Err(error) => {
-            println!("Error: {}", error);
+            tracing::error!("Error: {}", error);
             None
         }
     }

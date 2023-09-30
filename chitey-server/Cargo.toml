@@ -11,11 +11,11 @@ description = "chitey framework on this chitey-server"
 [dependencies]
 http = "0.2"
 hyper = { version = "0.14", features = [
-  "server",
-  "http1",
-  "http2",
-  "stream",
-  "runtime",
+    "server",
+    "http1",
+    "http2",
+    "stream",
+    "runtime",
 ] }
 mpart-async = "0.6"
 chrono = "0.4"
@@ -27,9 +27,9 @@ rustls = { version = "0.21" }
 futures-util = "0.3"
 tokio-rustls = "0.24"
 quinn = { version = "0.10", default-features = false, features = [
-  "runtime-tokio",
-  "tls-rustls",
-  "ring",
+    "runtime-tokio",
+    "tls-rustls",
+    "ring",
 ] }
 rustls-pemfile = "1.0"
 derive_more = "0.99"
@@ -38,6 +38,7 @@ async-trait.workspace = true
 tokio.workspace = true
 urlpattern.workspace = true
 thiserror = "1.0"
+tracing = "0.1"
 
 # [target.'cfg(target_os = "windows")'.dependencies]
 winapi = "0.3"

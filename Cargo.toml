@@ -3,11 +3,11 @@
 [workspace]
 resolver = "2"
 members = [
-  "chitey",
-  "chitey-codegen",
-  "chitey-router",
-  "chitey-server",
-  "examples",
+    "chitey",
+    "chitey-codegen",
+    "chitey-router",
+    "chitey-server",
+    "examples",
 ]
 # exclude = ["examples"]
 
@@ -15,17 +15,17 @@ members = [
 license = "MIT"
 edition = "2021"
 rust-version = "1.64"
-version = "0.2.19"
+version = "0.2.20"
 
 [workspace.dependencies]
 async-trait = "0.1"
 tokio = { version = "1.32", features = [
-  "rt-multi-thread",
-  "macros",
-  "io-util",
-  "io-std",
-  "fs",
-  "time",
-  "full",
+    "rt-multi-thread",
+    "macros",
+    "io-util",
+    "io-std",
+    "fs",
+    "time",
+    "full",
 ] }
 urlpattern = "0.2"

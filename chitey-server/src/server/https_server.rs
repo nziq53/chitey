@@ -201,7 +201,7 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
                                 if req_contain_key {
                                     resp = resp.header("Another-Header", "Ack");
                                 }
-                                match resp.body(Body::from(body)) {
+                                match resp.header("Alt-Svc", "h3=\":443\"; ma=2592000").body(Body::from(body)) {
                                     Ok(v) => Ok(v),
                                     Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
                                 }
@@ -222,7 +222,7 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
                                 if req_contain_key {
                                     resp = resp.header("Another-Header", "Ack");
                                 }
-                                match resp.body(Body::from(body)) {
+                                match resp.header("Alt-Svc", "h3=\":443\"; ma=2592000").body(Body::from(body)) {
                                     Ok(v) => Ok(v),
                                     Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
                                 }
@@ -238,7 +238,7 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
     let builder = Response::builder()
         .header("Alt-Svc", "h3=\":443\"; ma=2592000")
         .status(StatusCode::NOT_FOUND);
-    
+
     match builder.body(Body::from(Bytes::copy_from_slice(b"page not found"))) {
         // match builder.body(Body::empty()) {
         Ok(v) => Ok(v),
@@ -287,7 +287,7 @@ async fn parse_mpart(req: Request<Body>, mime_type: Mime) -> HashMap<String, Str
         if fs::create_dir_all(UPLOAD_DIRNAME).is_err(){
             // println!("** ディレクトリの作成失敗 **");
             continue;
-        }      
+        }
         let filename = chrono::Utc::now().format("%Y%m%d%H%M%S").to_string();
         let filename = format!("{UPLOAD_DIRNAME}/{filename}.dat");
         let mut writer = BufWriter::new(File::create(&filename).unwrap());
@@ -306,7 +306,7 @@ async fn parse_mpart(req: Request<Body>, mime_type: Mime) -> HashMap<String, Str
         let value = String::from_utf8(buffer.to_vec()).unwrap();
         a.insert(name, value);
         }
-        
+
     }
     a
 }

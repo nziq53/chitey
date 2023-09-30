@@ -8,6 +8,7 @@ use http::Method;
 use http::Request;
 use http::StatusCode;
 use hyper::Body;
+use tracing::info;
 // use tracing::{error, info, trace_span};
 use urlpattern::UrlPatternMatchInput;
 
@@ -60,7 +61,7 @@ pub async fn launch_http3_server(
             match new_conn.await {
                 Ok(conn) => {
                     // #[cfg(debug_assertions)]
-                    // info!("new connection established");
+                    info!("new connection established");
 
                     let mut h3_conn = h3::server::Connection::new(h3_quinn::Connection::new(conn))
                         .await
@@ -148,7 +149,7 @@ where
                     return match factory_loc.handler_func(input.clone(), (req, false)).await {
                     Ok((mut resp, body)) => {
                         if req_contain_key {
-                        resp = resp.header("Another-Header", "Ack");
+                            resp = resp.header("Another-Header", "Ack");
                         }
                         throw_chitey_internal_server_error(send_stream.send_response(resp.body(()).unwrap()).await)?;
                         throw_chitey_internal_server_error(send_stream.send_data(body).await)?;
@@ -159,7 +160,7 @@ where
                 }
             };
         }
-  
+
         // POST
         if res.guard == Guard::Post && method == Method::POST {
             let factory_loc = factory.lock().await;
@@ -167,7 +168,7 @@ where
                 return match factory_loc.handler_func(input.clone(), (req, false)).await {
                     Ok((mut resp, body)) => {
                         if req_contain_key {
-                        resp = resp.header("Another-Header", "Ack");
+                            resp = resp.header("Another-Header", "Ack");
                         }
                         throw_chitey_internal_server_error(send_stream.send_response(resp.body(()).unwrap()).await)?;
                         throw_chitey_internal_server_error(send_stream.send_data(body).await)?;
