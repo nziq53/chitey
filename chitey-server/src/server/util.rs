@@ -5,16 +5,10 @@ use rustls::{Certificate, PrivateKey};
 
 use crate::web_server::{Certs, ChiteyError};
 
-
-
 #[derive(Clone)]
 pub struct TlsCertsKey {
     pub certs: Vec<Certificate>,
     pub key: PrivateKey,
-}
-
-pub fn error(err: String) -> std::io::Error {
-    std::io::Error::new(std::io::ErrorKind::Other, err)
 }
 
 pub fn get_certs_and_key(certs: Certs) -> Result<TlsCertsKey, Box<dyn std::error::Error>> {
@@ -37,40 +31,41 @@ pub fn get_certs_and_key(certs: Certs) -> Result<TlsCertsKey, Box<dyn std::error
 pub fn load_certs(filepath: PathBuf) -> std::io::Result<Vec<rustls::Certificate>> {
     // Open certificate file.
     let certfile = fs::File::open(filepath.clone()).map_err(|e| {
-        error(format!(
+        ChiteyError::InternalServerError(format!(
             "failed to open {}: {}",
             filepath.to_string_lossy(),
             e
         ))
-    })?;
+    }).unwrap();
     let mut reader = std::io::BufReader::new(certfile);
 
     // Load and return certificate.
     let certs = rustls_pemfile::certs(&mut reader)
-        .map_err(|_| error("failed to load certificate".into()))?;
+        .map_err(|_| ChiteyError::InternalServerError("failed to load certificate".into())).unwrap();
     Ok(certs.into_iter().map(rustls::Certificate).collect())
 }
 
 pub fn load_private_key(filepath: PathBuf) -> std::io::Result<rustls::PrivateKey> {
     // Open keyfile.
     let keyfile = fs::File::open(filepath.clone()).map_err(|e| {
-        error(format!(
+        ChiteyError::InternalServerError(format!(
             "failed to open {}: {}",
             filepath.to_string_lossy(),
             e
         ))
-    })?;
+    }).unwrap();
     let mut reader = std::io::BufReader::new(keyfile);
 
     // Load and return a single private key.
     let keys = rustls_pemfile::pkcs8_private_keys(&mut reader)
-        .map_err(|_| error("failed to load private key".into()))?;
+        .map_err(|_| ChiteyError::InternalServerError("failed to load private key".into())).unwrap();
     if keys.len() != 1 {
-        return Err(error("expected a single private key".into()));
+        return Err(ChiteyError::InternalServerError("expected a single private key".into())).unwrap();
     }
     Ok(rustls::PrivateKey(keys[0].clone()))
 }
 
+#[inline]
 pub fn process_result<T, R: std::fmt::Display>(result: Result<T, R>) -> Option<T> {
     match result {
         Ok(value) => Some(value),
@@ -81,14 +76,7 @@ pub fn process_result<T, R: std::fmt::Display>(result: Result<T, R>) -> Option<T
     }
 }
 
-#[derive(Clone)]
-pub enum CustomOption<T> {
-    None,
-    Some(T),
-}
-unsafe impl<T> Send for CustomOption<T> {}
-unsafe impl<T> Sync for CustomOption<T> {}
-
+#[inline]
 pub fn throw_chitey_internal_server_error<T, E>(res: Result<T, E>) -> Result<T, ChiteyError>
 where
     E: std::error::Error,
@@ -97,4 +85,4 @@ where
         Ok(v) => Ok(v),
         Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
     }
-} 
+}

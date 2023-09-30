@@ -16,6 +16,7 @@ impl<W> StreamWrapper<W>
 where
     W: BidiStream<Bytes> + 'static + Send + Sync
 {
+    #[inline]
     pub fn new(inner: RequestStream<W::RecvStream, Bytes>) -> Self {
         let inner = Arc::new(Mutex::new(inner));
         Self {
@@ -24,6 +25,7 @@ where
         }
     }
 
+    #[inline]
     async fn recv_data_wrap(inner: Arc<Mutex<RequestStream<W::RecvStream, Bytes>>>) -> Option<Result<Bytes, h3::Error>>
     where
         W: BidiStream<Bytes> + 'static + Send + Sync
@@ -46,6 +48,7 @@ W: BidiStream<Bytes> + 'static + Send + Sync
 {
     type Item = Result<Bytes, h3::Error>;
 
+    #[inline]
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>)
         -> Poll<Option<Self::Item>>
     {

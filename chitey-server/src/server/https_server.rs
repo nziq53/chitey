@@ -11,7 +11,6 @@ use mime::Mime;
 use rustls::ServerConfig;
 use tokio::io::{AsyncRead, ReadBuf, self, AsyncWrite};
 use urlpattern::UrlPatternMatchInput;
-use super::util::error;
 
 // HTTP/2 TLS など  chromeなどのブラウザはこちらに最初にアクセスしてくる
 // https://github.com/quic-go/quic-go/issues/3890
@@ -40,7 +39,7 @@ pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: H
     };
 
     let incoming = AddrIncoming::bind(&listen)
-        .map_err(|e| error(format!("Incoming failed: {:?}", e))).expect("error");
+        .map_err(|e| ChiteyError::InternalServerError(format!("Incoming failed: {:?}", e))).expect("error");
     let make_service = make_service_fn(move |_| {
         let factories = factories.clone();
         let service = service_fn(move |req| {
@@ -68,6 +67,7 @@ pub struct HyperAcceptor {
 }
 
 impl HyperAcceptor {
+    #[inline]
     pub fn new(config: Arc<ServerConfig>, incoming: AddrIncoming) -> HyperAcceptor {
         HyperAcceptor { config, incoming }
     }
@@ -86,6 +86,7 @@ pub struct HyperStream {
 }
 
 impl HyperStream {
+    #[inline]
     fn new(stream: AddrStream, config: Arc<ServerConfig>) -> HyperStream {
         let accept = tokio_rustls::TlsAcceptor::from(config).accept(stream);
         HyperStream {
@@ -95,6 +96,7 @@ impl HyperStream {
 }
 
 impl AsyncRead for HyperStream {
+    #[inline]
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context,
@@ -117,6 +119,7 @@ impl AsyncRead for HyperStream {
 }
 
 impl AsyncWrite for HyperStream {
+    #[inline]
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -136,6 +139,7 @@ impl AsyncWrite for HyperStream {
         }
     }
 
+    #[inline]
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         match self.state {
             State::Handshaking(_) => Poll::Ready(Ok(())),
@@ -143,6 +147,7 @@ impl AsyncWrite for HyperStream {
         }
     }
 
+    #[inline]
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         match self.state {
             State::Handshaking(_) => Poll::Ready(Ok(())),
@@ -155,6 +160,7 @@ impl Accept for HyperAcceptor {
     type Conn = HyperStream;
     type Error = io::Error;
 
+    #[inline]
     fn poll_accept(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -263,7 +269,7 @@ pub async fn process_upload(id:String, builder:http::response::Builder, req: Req
     }
     let a = parse_mpart(req, mime_type).await;
     dbg!(&a);
-    return builder.status(StatusCode::OK).body(Body::from(format!("uploadID: {}",id)));
+    builder.status(StatusCode::OK).body(Body::from(format!("uploadID: {}",id)))
 }
 
 // multipartをパースしてhashmapにして返す関数
@@ -288,7 +294,7 @@ async fn parse_mpart(req: Request<Body>, mime_type: Mime) -> HashMap<String, Str
         // let mut bufferlen: i64 = 0;
         while let Ok(Some(bytes)) = field.try_next().await {
             // bufferlen += bytes.len() as i64;
-            writer.write(&bytes).unwrap();
+            writer.write_all(&bytes).unwrap();
         }
         // println!("{bufferlen}");
         a.insert(name, filename);
@@ -302,5 +308,5 @@ async fn parse_mpart(req: Request<Body>, mime_type: Mime) -> HashMap<String, Str
         }
         
     }
-    return a;
+    a
 }

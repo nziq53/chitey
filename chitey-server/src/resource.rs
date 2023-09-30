@@ -14,6 +14,7 @@ pub struct Resource {
 
 impl Resource {
     /// Constructs new resource that matches a `path` pattern.
+    #[inline]
     pub fn new(path: &str) -> Self {
         let ptn = <UrlPattern>::parse(UrlPatternInit {
             pathname: Some(path.to_owned()),
@@ -28,20 +29,24 @@ impl Resource {
             guard: Guard::Get,
         }
     }
+    #[inline]
     pub fn name(mut self, nm: &str) -> Self {
         self.name = Some(nm.to_string());
         self
     }
+    #[inline]
     pub fn guard(mut self, g: Guard) -> Self {
         self.guard = g;
         self
     }
+    #[inline]
     pub fn get_rdef(self) -> UrlPattern {
         self.rdef
     }
 }
 
 impl Clone for Resource {
+    #[inline]
     fn clone(&self) -> Self {
         Self { rdef: <UrlPattern>::parse(UrlPatternInit {
             pathname: Some(self.url_ptn.clone().to_owned()),

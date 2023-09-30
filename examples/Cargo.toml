@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 chitey = { version = "0.2", features = ["macros"] }
+# chitey = { path = "../chitey", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
 # chitey-codegen = { path = "../chitey-codegen" }
 

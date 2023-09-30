@@ -29,7 +29,7 @@ pub async fn launch_http3_server(
     tls_cert_key: TlsCertsKey,
     http3_server_opt: Http3ServerOpt,
     factories: Factories,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), ChiteyError> {
     let TlsCertsKey { certs, key } = tls_cert_key;
     let Http3ServerOpt { listen } = http3_server_opt;
 
@@ -40,7 +40,7 @@ pub async fn launch_http3_server(
             .with_protocol_versions(&[&rustls::version::TLS13])
             .unwrap()
             .with_no_client_auth()
-            .with_single_cert(certs.clone(), key.clone())?;
+            .with_single_cert(certs.clone(), key.clone()).unwrap();
         tls_config.max_early_data_size = u32::MAX;
         let alpn: &[u8] = b"h3";
         tls_config.alpn_protocols = vec![alpn.into()];
@@ -48,14 +48,15 @@ pub async fn launch_http3_server(
     };
 
     let server_config = quinn::ServerConfig::with_crypto(Arc::new(tls_config));
-    let endpoint = quinn::Endpoint::server(server_config, listen)?;
+    let endpoint = quinn::Endpoint::server(server_config, listen).unwrap();
 
     while let Some(new_conn) = endpoint.accept().await {
-        #[cfg(debug_assertions)]
+        // #[cfg(debug_assertions)]
         // trace_span!("New connection being attempted");
 
-        let factories = factories.clone();
+        let factories2 = factories.clone();
         tokio::spawn(async move {
+            println!("{:?}", factories2.factories.len());
             match new_conn.await {
                 Ok(conn) => {
                     // #[cfg(debug_assertions)]
@@ -71,13 +72,13 @@ pub async fn launch_http3_server(
                                 // #[cfg(debug_assertions)]
                                 // eprintln!("new request: {:#?}", req);
 
-                                let factories = factories.clone();
+                                let factories3 = factories2.clone();
                                 tokio::spawn(async move {
                                     // if let Err(e) = handle_request_http3(req, stream).await {
                                     //     #[cfg(debug_assertions)]
                                     //     error!("handling request failed: {}", e);
                                     // };
-                                    let _ = handle_request_http3(req, stream, factories).await;
+                                    let _ = handle_request_http3(req, stream, factories3).await;
                                 });
                             }
 

@@ -47,6 +47,7 @@ where
   Ok(())
 }
 
+#[inline]
 async fn redirect_to_https(
   location: String,
   _req: Request<Body>,
@@ -59,6 +60,7 @@ async fn redirect_to_https(
   builder.body(Body::empty())
 }
 
+#[inline]
 async fn not_redirect_to_https(
   _req: Request<Body>,
 ) -> Result<Response<Body>, http::Error> {

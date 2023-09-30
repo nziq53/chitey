@@ -537,6 +537,7 @@ impl ToTokens for Route {
                     let #tuple_types = #tuples;
                     return true;
                 }
+                #[inline]
                 async fn handler_func(&self, url: ::chitey::UrlPatternMatchInput, req: ::chitey::Request) -> Responder {
                     #[allow(unused_variables)]
                     #ast

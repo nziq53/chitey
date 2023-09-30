@@ -162,10 +162,10 @@ use thiserror::Error;
 pub enum ChiteyError {
     #[error("extract value failed")]
     UrlPatternError,
-    #[error("server failed")]
+    #[error("server failed: {0}")]
     InternalServerError(String),
-    #[error("cannot analyze key")]
+    #[error("cannot analyze key: {0}")]
     KeyAnalyzeError(String),
-    #[error("failed kill server")]
+    #[error("failed kill server: {0}")]
     ServerKillError(String),
 }
