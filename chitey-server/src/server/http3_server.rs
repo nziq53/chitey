@@ -296,7 +296,7 @@ where
     throw_chitey_internal_server_error(send_stream.finish().await)
 }
 
-pub(crate) fn throw_chitey_internal_server_error<T, E>(res: Result<T, E>) -> Result<T, ChiteyError>
+pub fn throw_chitey_internal_server_error<T, E>(res: Result<T, E>) -> Result<T, ChiteyError>
 where
     E: std::error::Error,
 {
