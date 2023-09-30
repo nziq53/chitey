@@ -18,6 +18,7 @@ use crate::web_server::Factories;
 
 
 use super::util::TlsCertsKey;
+use super::util::throw_chitey_internal_server_error;
 
 #[derive(Clone)]
 pub struct Http3ServerOpt {
@@ -295,13 +296,3 @@ where
     throw_chitey_internal_server_error(send_stream.send_data(Bytes::copy_from_slice(b"page not found")).await)?;
     throw_chitey_internal_server_error(send_stream.finish().await)
 }
-
-pub fn throw_chitey_internal_server_error<T, E>(res: Result<T, E>) -> Result<T, ChiteyError>
-where
-    E: std::error::Error,
-{
-    match res {
-        Ok(v) => Ok(v),
-        Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
-    }
-} 

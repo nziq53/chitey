@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use rustls::{Certificate, PrivateKey};
 // use tracing::info;
 
-use crate::web_server::Certs;
+use crate::web_server::{Certs, ChiteyError};
 
 
 
@@ -88,3 +88,13 @@ pub enum CustomOption<T> {
 }
 unsafe impl<T> Send for CustomOption<T> {}
 unsafe impl<T> Sync for CustomOption<T> {}
+
+pub fn throw_chitey_internal_server_error<T, E>(res: Result<T, E>) -> Result<T, ChiteyError>
+where
+    E: std::error::Error,
+{
+    match res {
+        Ok(v) => Ok(v),
+        Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
+    }
+} 
