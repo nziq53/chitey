@@ -1,5 +1,6 @@
-pub type Responder = Result<(http::response::Builder, bytes::Bytes), ChiteyError>;
-
+pub type Responder = Result<Response<Body>, ChiteyError>;
+use http::Response;
+use hyper::Body;
 use urlpattern::{UrlPattern, UrlPatternInit};
 
 use crate::{guard::Guard, web_server::ChiteyError};

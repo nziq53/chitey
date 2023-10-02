@@ -77,7 +77,7 @@ impl WebServer
 
         Ok(self)
     }
-    
+
     pub fn tls_bind<A>(mut self, address: A) -> io::Result<Self>
     where
         A: ToSocketAddrs,
@@ -149,13 +149,12 @@ impl WebServer
         };
 
         eprintln!("You must set key always!! Right or Fake or not!!");
-      
+
         Ok(())
     }
 }
 
 pub type Request = (http::Request<Body>, bool);
-
 
 use thiserror::Error;
 #[derive(Error, Debug)]

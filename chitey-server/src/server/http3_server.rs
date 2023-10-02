@@ -1,18 +1,19 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 use bytes::Bytes;
+use futures_util::StreamExt;
 use h3::error::ErrorLevel;
 use h3::quic::BidiStream;
 use h3::server::RequestStream;
-use http::Method;
+use http::HeaderValue;
 use http::Request;
+use http::Response;
 use http::StatusCode;
 use hyper::Body;
 use tracing::info;
 // use tracing::{error, info, trace_span};
 use urlpattern::UrlPatternMatchInput;
 
-use crate::guard::Guard;
 use crate::server::http3_stream_wrapper::StreamWrapper;
 use crate::web_server::ChiteyError;
 use crate::web_server::Factories;
@@ -79,7 +80,9 @@ pub async fn launch_http3_server(
                                     //     #[cfg(debug_assertions)]
                                     //     error!("handling request failed: {}", e);
                                     // };
-                                    let _ = handle_request_http3(req, stream, factories3).await;
+                                    if let Err(e) = handle_request_http3(req, stream, factories3).await {
+                                        tracing::error!("http3: {}", e.to_string());
+                                    }
                                 });
                             }
 
@@ -141,42 +144,37 @@ where
     let req = req.map(|_| Body::wrap_stream(stm));
 
     for (res, factory) in factories.factories {
-        // GET
-        if res.guard == Guard::Get && method == Method::GET {
+        // GET && POST
+        if res.guard == method {
             if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
                 let factory_loc = factory.lock().await;
                 if factory_loc.analyze_types(input.clone()) {
-                    return match factory_loc.handler_func(input.clone(), (req, false)).await {
-                    Ok((mut resp, body)) => {
+                    return match factory_loc.handler_func(input.clone(), (req, true)).await {
+                    Ok(resp) => {
+                        let (mut parts, mut body) = resp.into_parts();
                         if req_contain_key {
-                            resp = resp.header("Another-Header", "Ack");
+                            parts.headers.append("Another-Header", HeaderValue::from_static("Ack"));
                         }
-                        throw_chitey_internal_server_error(send_stream.send_response(resp.body(()).unwrap()).await)?;
-                        throw_chitey_internal_server_error(send_stream.send_data(body).await)?;
-                        throw_chitey_internal_server_error(send_stream.finish().await)
+                        parts.headers.append("Alt-Svc", HeaderValue::from_static("h3=\":443\"; ma=2592000"));
+                        throw_chitey_internal_server_error(send_stream.send_response(Response::from_parts(parts, ())).await)?;
+                        while let Some(chunk) = body.next().await {
+                            match chunk {
+                                Ok(chunk) => {
+                                    throw_chitey_internal_server_error(send_stream.send_data(chunk).await)?;
+                                }
+                                Err(e) => {
+                                    eprintln!("エラーが発生しました: {}", e);
+                                    break;
+                                }
+                            }
+                        }
+                        throw_chitey_internal_server_error(send_stream.finish().await)?;
+                        Ok(())
                     },
                     Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
                     }
                 }
             };
-        }
-
-        // POST
-        if res.guard == Guard::Post && method == Method::POST {
-            let factory_loc = factory.lock().await;
-            if factory_loc.analyze_types(input.clone()) {
-                return match factory_loc.handler_func(input.clone(), (req, false)).await {
-                    Ok((mut resp, body)) => {
-                        if req_contain_key {
-                            resp = resp.header("Another-Header", "Ack");
-                        }
-                        throw_chitey_internal_server_error(send_stream.send_response(resp.body(()).unwrap()).await)?;
-                        throw_chitey_internal_server_error(send_stream.send_data(body).await)?;
-                        throw_chitey_internal_server_error(send_stream.finish().await)
-                    },
-                    Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
-                }
-            }
         }
     }
 
@@ -293,7 +291,7 @@ where
     // Ok(send_stream.finish().await?)
     //     Ok(())
     // } else {
-    let resp = http::Response::builder().status(StatusCode::NOT_FOUND).body(()).unwrap();
+    let resp = http::Response::builder().status(StatusCode::NOT_FOUND).header("Alt-Svc", "h3=\":443\"; ma=2592000").body(()).unwrap();
     throw_chitey_internal_server_error(send_stream.send_response(resp).await)?;
     throw_chitey_internal_server_error(send_stream.send_data(Bytes::copy_from_slice(b"page not found")).await)?;
     throw_chitey_internal_server_error(send_stream.finish().await)

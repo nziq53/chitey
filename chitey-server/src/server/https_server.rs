@@ -1,11 +1,11 @@
 use std::{sync::{self, Arc}, net::SocketAddr, convert::Infallible, pin::Pin, task::{Context, Poll}, io::{BufWriter, Write}, fs::{File, self}, collections::HashMap};
 
-use crate::{web_server::{Factories, ChiteyError}, guard::Guard};
+use crate::web_server::{Factories, ChiteyError};
 
-use super::util::TlsCertsKey;
+use super::util::{TlsCertsKey, throw_chitey_internal_server_error};
 use bytes::{BytesMut, BufMut, Bytes};
 use futures_util::{ready, Future, TryStreamExt};
-use http::{Request, Response, StatusCode, Method};
+use http::{Request, Response, StatusCode, HeaderValue};
 use hyper::{server::{conn::{AddrIncoming, AddrStream}, accept::Accept}, service::{make_service_fn, service_fn}, Server, Body};
 use mime::Mime;
 use rustls::ServerConfig;
@@ -43,7 +43,7 @@ pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: H
     let make_service = make_service_fn(move |_| {
         let factories = factories.clone();
         let service = service_fn(move |req| {
-        handle_https_service(req, factories.clone())
+          handle_https_service(req, factories.clone())
         });
 
         async move { Ok::<_, Infallible>(service) }
@@ -174,6 +174,7 @@ impl Accept for HyperAcceptor {
     }
 }
 
+#[inline]
 async fn handle_https_service(req: Request<Body>, factories: Factories) -> Result<Response<Body>, ChiteyError> {
     if req.uri().path().contains("..") {
         let builder = Response::builder()
@@ -185,52 +186,29 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
         }
     }
 
-    let url = req.uri().to_string().parse().unwrap();
+    let url = throw_chitey_internal_server_error(req.uri().to_string().parse())?;
     let input = UrlPatternMatchInput::Url(url);
     {
         let method = req.method().clone();
         let req_contain_key = req.headers().contains_key("Another-Header");
         for (res, factory) in factories.factories {
-            // GET
-            if res.guard == Guard::Get && method == Method::GET {
+            // GET && POST
+            if res.guard == method {
                 if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
                     let factory_loc = factory.lock().await;
                     if factory_loc.analyze_types(input.clone()) {
                         return match factory_loc.handler_func(input.clone(), (req, false)).await {
-                            Ok((mut resp, body)) => {
+                            Ok(mut resp) => {
                                 if req_contain_key {
-                                    resp = resp.header("Another-Header", "Ack");
+                                    resp.headers_mut().append("Another-Header", HeaderValue::from_static("Ack"));
                                 }
-                                match resp.header("Alt-Svc", "h3=\":443\"; ma=2592000").body(Body::from(body)) {
-                                    Ok(v) => Ok(v),
-                                    Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
-                                }
+                                resp.headers_mut().append("Alt-Svc", HeaderValue::from_static("h3=\":443\"; ma=2592000"));
+                                Ok(resp)
                             },
                             Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
                         }
                     }
                 };
-            }
-
-            // POST
-            if res.guard == Guard::Post && method == Method::POST {
-                if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
-                    let factory_loc = factory.lock().await;
-                    if factory_loc.analyze_types(input.clone()) {
-                        return match factory_loc.handler_func(input.clone(), (req, false)).await {
-                            Ok((mut resp, body)) => {
-                                if req_contain_key {
-                                    resp = resp.header("Another-Header", "Ack");
-                                }
-                                match resp.header("Alt-Svc", "h3=\":443\"; ma=2592000").body(Body::from(body)) {
-                                    Ok(v) => Ok(v),
-                                    Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
-                                }
-                            },
-                            Err(e) => Err(ChiteyError::InternalServerError(e.to_string())),
-                        }
-                    }
-                }
             }
         }
     }
