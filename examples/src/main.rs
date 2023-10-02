@@ -1,45 +1,46 @@
-use chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError, http::Response, Bytes};
+use chitey::{get, Responder, WebServer, post, Certs, Request, ChiteyError, http::Response, Bytes, throw_chitey_internal_server_error as throw};
 
 #[get("/:id/:name")]
 async fn greet((id, name): (u32, String), _req: Request) -> Responder {
-    Ok((Response::builder(), Bytes::from(format!("Hello {}! id:{}", name, id))))
+    throw(Response::builder().body(Bytes::from(format!("Hello {}! id:{}", name, id)).into()))
 }
+
 
 #[get("/:id/:name")]
 async fn greet_not_number((id, name): (String, String), _req: Request) -> Responder {
-    Ok((Response::builder(), Bytes::from(format!("HelloNotNumberId {}! id:{}", name, id))))
+    throw(Response::builder().body(Bytes::from(format!("HelloNotNumberId {}! id:{}", name, id)).into()))
 }
 
 #[get("/")]
 async fn home((): (), _req: Request) -> Responder {
-    Ok((Response::builder(), Bytes::copy_from_slice(b"source")))
+    throw(Response::builder().body(Bytes::copy_from_slice(b"source").into()))
 }
 
 #[get("/all/:all")]
 async fn all_all_path((): (), _req: Request) -> Responder {
-    Ok((Response::builder(), Bytes::copy_from_slice(b"source")))
+    throw(Response::builder().body(Bytes::copy_from_slice(b"source").into()))
 }
 
 #[get("/:all")]
 async fn all_path((all,): (String,), _req: Request) -> Responder {
-    Ok((Response::builder(), Bytes::from(format!("All String: {}", all))))
+    throw(Response::builder().body(Bytes::from(format!("All String: {}", all)).into()))
 }
 
 #[get("/**")]
 async fn notfound((): (), _req: Request) -> Responder {
-    Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
+    throw(Response::builder().body(Bytes::copy_from_slice(b"404 not found").into()))
 }
 
 #[post("/**")]
 async fn notfoundpost((): (), _req: Request) -> Responder {
-    Ok((Response::builder(), Bytes::copy_from_slice(b"404 not found")))
+    throw(Response::builder().body(Bytes::copy_from_slice(b"404 not found").into()))
 }
 
 #[tokio::main]
 async fn main() -> Result<(), ChiteyError> {
     println!("Hello, world!");
     WebServer::new()
-    .bind("localhost:18080").unwrap()
+    .bind("localhost:18081").unwrap()
     .tls_bind("localhost:18443").unwrap()
     .tls(Certs { cert: "server.cert".into(), key: "server.key".into() })
     .service(greet)

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chitey = { version = "0.2", features = ["macros"] }
+chitey = { version = "0.3", features = ["macros"] }
 # chitey = { path = "../chitey", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
 # chitey-codegen = { path = "../chitey-codegen" }
