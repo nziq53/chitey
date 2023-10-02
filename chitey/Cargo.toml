@@ -4,9 +4,9 @@ authors = ["oligami <nziq53@gmail.com>", "nicomiu404", "Ackky2424"]
 description = "Http3 and Https low layer server framework on hyper and h3"
 repository = "https://github.com/oligami-0424/chitey.git"
 categories = [
-  "web-programming::http-server",
-  "asynchronous",
-  "network-programming",
+    "web-programming::http-server",
+    "asynchronous",
+    "network-programming",
 ]
 keywords = ["http3", "http", "web", "chitey", "framework"]
 license.workspace = true
@@ -19,9 +19,9 @@ name = "chitey"
 path = "src/lib.rs"
 
 [dependencies]
-chitey-codegen = "0.2"
-# chitey-router = "0.2"
-chitey-server = "0.2"
+chitey-codegen = "0.3"
+# chitey-router = "0.3"
+chitey-server = "0.3"
 # chitey-codegen = { path = "../chitey-codegen" }
 # chitey-router = { path = "../chitey-router" }
 # chitey-server = { path = "../chitey-server" }
