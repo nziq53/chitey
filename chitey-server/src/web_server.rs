@@ -3,7 +3,7 @@ use tokio::sync::Mutex;
 use urlpattern::UrlPatternMatchInput;
 use std::{
     io,
-    net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
+    net::{SocketAddr, ToSocketAddrs},
     path::PathBuf, pin::Pin, sync::Arc,
 };
 
@@ -34,8 +34,8 @@ pub trait HttpServiceFactory: Sync
 
 pub struct WebServer {
     cert: Option<Certs>,
-    listen: SocketAddr,
-    tls_listen: SocketAddr,
+    listen: Option<SocketAddr>,
+    tls_listen: Option<SocketAddr>,
     redirect: Option<String>,
     factories: Vec<(Resource, Pin<Box<dyn HttpServiceFactory + 'static + Send + Sync>>)>,
 }
@@ -43,11 +43,10 @@ pub struct WebServer {
 impl WebServer
 {
     pub fn new() -> Self {
-        let localhost = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
         Self {
             cert: None,
-            listen: SocketAddr::new(localhost, 8080),
-            tls_listen: SocketAddr::new(localhost, 8443),
+            listen: None,
+            tls_listen: None,
             redirect: None,
             factories: Vec::new(),
         }
@@ -69,7 +68,7 @@ impl WebServer
         match address.to_socket_addrs() {
             Ok(v) => {
                 for addr in v.collect::<Vec<SocketAddr>>() {
-                    self.listen = addr;
+                    self.listen = Some(addr);
                 }
             }
             Err(e) => return Err(e),
@@ -85,7 +84,7 @@ impl WebServer
         match address.to_socket_addrs() {
             Ok(v) => {
                 for addr in v.collect::<Vec<SocketAddr>>() {
-                    self.tls_listen = addr;
+                    self.tls_listen = Some(addr);
                 }
             }
             Err(e) => return Err(e),
@@ -122,29 +121,39 @@ impl WebServer
                 Err(e) => return Err(ChiteyError::KeyAnalyzeError(e.to_string())),
             };
             let tls_certs_key2 = tls_certs_key.clone();
-            let http_server_opt = HttpServerOpt{ listen: self.listen, redirect: self.redirect };
-            let https_server_opt = HttpsServerOpt{listen: self.tls_listen};
-            let http3_server_opt = Http3ServerOpt{listen: self.tls_listen};
-
-            let handle_http = tokio::spawn(async move {
-            loop {
-                process_result(launch_http_server(http_server_opt.clone(), save_pid).await);
-            };
-            });
-            let handle_https = tokio::spawn(async move {
-                loop {
-                    process_result(launch_https_server(tls_certs_key.clone(), https_server_opt.clone(), factories.clone()).await);
+            let handle_http = async {
+                let factories = factories.clone();
+                if let Some(li) = self.listen {
+                    let http_server_opt = HttpServerOpt{ listen: li, redirect: self.redirect };
+                    let _ = tokio::spawn(async move {
+                        loop {
+                            process_result(launch_http_server(http_server_opt.clone(), save_pid, factories.clone()).await);
+                        };
+                    }).await;
                 }
-            });
-            let handle_http3 = tokio::spawn(async move {
-            loop {
-                process_result(launch_http3_server(tls_certs_key2.clone(), http3_server_opt.clone(), factories2.clone()).await);
-            }
-            });
-            let (_, _, _) = tokio::join!(
+            };
+            let factories = factories.clone();
+            let handle_https = async {
+                if let Some(li) = self.tls_listen {
+                    let https_server_opt = HttpsServerOpt{listen: li};
+                    let http3_server_opt = Http3ServerOpt{listen: li};
+                    let handle_https = tokio::spawn(async move {
+                        loop {
+                            process_result(launch_https_server(tls_certs_key.clone(), https_server_opt.clone(), factories.clone()).await);
+                        }
+                    });
+                    let handle_http3 = tokio::spawn(async move {
+                        loop {
+                            process_result(launch_http3_server(tls_certs_key2.clone(), http3_server_opt.clone(), factories2.clone()).await);
+                        }
+                    });
+                    let (_, _) = tokio::join!(handle_https, handle_http3);
+                }
+            };
+
+            let (_, _) = tokio::join!(
                 handle_http,
                 handle_https,
-                handle_http3,
             );
         };
 

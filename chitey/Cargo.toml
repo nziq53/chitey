@@ -19,12 +19,12 @@ name = "chitey"
 path = "src/lib.rs"
 
 [dependencies]
-chitey-codegen = "0.3"
+# chitey-codegen = "0.3"
 # chitey-router = "0.3"
-chitey-server = "0.3"
-# chitey-codegen = { path = "../chitey-codegen" }
+# chitey-server = "0.3"
+chitey-codegen = { path = "../chitey-codegen" }
 # chitey-router = { path = "../chitey-router" }
-# chitey-server = { path = "../chitey-server" }
+chitey-server = { path = "../chitey-server" }
 async-trait.workspace = true
 urlpattern.workspace = true
 tokio.workspace = true

@@ -43,7 +43,7 @@ pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: H
     let make_service = make_service_fn(move |_| {
         let factories = factories.clone();
         let service = service_fn(move |req| {
-          handle_https_service(req, factories.clone())
+            handle_https_service(req, factories.clone())
         });
 
         async move { Ok::<_, Infallible>(service) }
