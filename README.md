@@ -76,3 +76,6 @@ chitey::kill_server() -> Result<(), ChiteyError>;
 
 certファイルをアップデートしたときに勝手に更新しません！！
 再起動しかないです。プルリクできる方はどうぞ
+
+## 最低バージョン
+-rust 1.64
