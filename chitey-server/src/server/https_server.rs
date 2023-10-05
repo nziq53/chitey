@@ -43,7 +43,7 @@ pub async fn launch_https_server (tls_cert_key: TlsCertsKey, https_server_opt: H
     let make_service = make_service_fn(move |_| {
         let factories = factories.clone();
         let service = service_fn(move |req| {
-            handle_https_service(req, factories.clone())
+            handle_https_service_wrap(req, factories.clone())
         });
 
         async move { Ok::<_, Infallible>(service) }
@@ -171,6 +171,17 @@ impl Accept for HyperAcceptor {
             Some(Err(e)) => Poll::Ready(Some(Err(e))),
             None => Poll::Ready(None),
         }
+    }
+}
+
+#[inline]
+async fn handle_https_service_wrap(req: Request<Body>, factories: Factories) -> Result<Response<Body>, ChiteyError> {
+    match handle_https_service(req, factories.clone()).await {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            tracing::error!("https: {}", e);
+            Err(e)
+        },
     }
 }
 

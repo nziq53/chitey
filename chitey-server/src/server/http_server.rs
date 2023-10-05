@@ -40,7 +40,7 @@ where
       let http_make_service = make_service_fn(move |_conn: &AddrStream| {
           let factories = factories.clone();
           let service = service_fn(move |req| {
-            not_redirect_to_https(req, factories.clone(), listen.to_string())
+            not_redirect_to_https_wrap(req, factories.clone(), listen.to_string())
         });
         async move { Ok::<_, http::Error>(service) }
     });
@@ -64,6 +64,22 @@ async fn redirect_to_https(
         .header("Location", location);
   // info!("location {}", location);
   builder.body(Body::empty())
+}
+
+
+#[inline]
+async fn not_redirect_to_https_wrap(
+    req: Request<Body>,
+    factories: Factories,
+    listen: String,
+) -> Result<Response<Body>, ChiteyError> {
+    match not_redirect_to_https(req, factories.clone(), listen.to_string()).await {
+        Ok(v) => Ok(v),
+        Err(e) => {
+            tracing::error!("https: {}", e);
+            Err(e)
+        },
+    }
 }
 
 #[inline]
