@@ -19,9 +19,9 @@ name = "chitey"
 path = "src/lib.rs"
 
 [dependencies]
-chitey-codegen = "0.3"
+chitey-codegen = "0.4"
 # chitey-router = "0.3"
-chitey-server = "0.3"
+chitey-server = "0.4"
 # chitey-codegen = { path = "../chitey-codegen" }
 # chitey-router = { path = "../chitey-router" }
 # chitey-server = { path = "../chitey-server" }
