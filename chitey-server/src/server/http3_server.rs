@@ -149,7 +149,7 @@ where
             if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
                 let factory_loc = factory.lock().await;
                 if factory_loc.analyze_types(input.clone()) {
-                    return match factory_loc.handler_func(input.clone(), (req, true)).await {
+                    return match factory_loc.handler_func(input.clone(), (req, true, factories.contexts.clone())).await {
                     Ok(resp) => {
                         let (mut parts, mut body) = resp.into_parts();
                         if req_contain_key {

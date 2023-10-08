@@ -208,7 +208,7 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
                 if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
                     let factory_loc = factory.lock().await;
                     if factory_loc.analyze_types(input.clone()) {
-                        return match factory_loc.handler_func(input.clone(), (req, false)).await {
+                        return match factory_loc.handler_func(input.clone(), (req, false, factories.contexts.clone())).await {
                             Ok(mut resp) => {
                                 if req_contain_key {
                                     resp.headers_mut().append("Another-Header", HeaderValue::from_static("Ack"));

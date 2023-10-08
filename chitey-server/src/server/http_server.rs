@@ -20,36 +20,35 @@ pub async fn launch_http_server<F> (http_server_opt: HttpServerOpt, func: F, fac
 where
     F: Fn()
 {
-  let HttpServerOpt{listen, redirect} = http_server_opt;
+    let HttpServerOpt{listen, redirect} = http_server_opt;
 
-  // 80ポートにhttpアクセスが来た時にリダイレクトしたりするため
-  if let Some(redirect) = redirect {
-    // println!("redirect to {}", redirect);
-    let http_make_service = make_service_fn(move |_conn: &AddrStream| {
-        let location = redirect.clone().to_owned();
-        let service = service_fn(move |req| {
-            redirect_to_https(location.clone(), req)
+    // 80ポートにhttpアクセスが来た時にリダイレクトしたりするため
+    if let Some(redirect) = redirect {
+        // println!("redirect to {}", redirect);
+        let http_make_service = make_service_fn(move |_conn: &AddrStream| {
+            let location = redirect.clone().to_owned();
+            let service = service_fn(move |req| {
+                redirect_to_https(location.clone(), req)
+            });
+            async move { Ok::<_, http::Error>(service) }
         });
-        async move { Ok::<_, http::Error>(service) }
-    });
-    let http_server = Server::bind(&listen).serve(http_make_service);
-    println!("Listening on http://{}", listen);
-    func();
-    let _ = http_server.await?;
-  } else {
-      let http_make_service = make_service_fn(move |_conn: &AddrStream| {
-          let factories = factories.clone();
-          let service = service_fn(move |req| {
-            not_redirect_to_https_wrap(req, factories.clone(), listen.to_string())
+        let http_server = Server::bind(&listen).serve(http_make_service);
+        println!("Listening on http://{}", listen);
+        func();
+        let _ = http_server.await?;
+    } else {
+        let http_make_service = make_service_fn(move |_conn: &AddrStream| {
+            let factories = factories.clone();
+            let service = service_fn(move |req| {
+                not_redirect_to_https_wrap(req, factories.clone(), listen.to_string())
+            });
+            async move { Ok::<_, http::Error>(service) }
         });
-        async move { Ok::<_, http::Error>(service) }
-    });
-    let http_server = Server::bind(&listen).serve(http_make_service);
-    println!("Listening on http://{}", listen);
-    func();
-    let _ = http_server.await?;
-
-  }
+        let http_server = Server::bind(&listen).serve(http_make_service);
+        println!("Listening on http://{}", listen);
+        func();
+        let _ = http_server.await?;
+    }
   Ok(())
 }
 
@@ -66,7 +65,6 @@ async fn redirect_to_https(
   builder.body(Body::empty())
 }
 
-
 #[inline]
 async fn not_redirect_to_https_wrap(
     req: Request<Body>,
@@ -76,7 +74,7 @@ async fn not_redirect_to_https_wrap(
     match not_redirect_to_https(req, factories.clone(), listen.to_string()).await {
         Ok(v) => Ok(v),
         Err(e) => {
-            tracing::error!("https: {}", e);
+            tracing::error!("http: {}", e);
             Err(e)
         },
     }
@@ -108,7 +106,7 @@ async fn not_redirect_to_https(
                 if let Ok(Some(_)) = res.rdef.exec(input.clone()) {
                     let factory_loc = factory.lock().await;
                     if factory_loc.analyze_types(input.clone()) {
-                        return match factory_loc.handler_func(input.clone(), (req, false)).await {
+                        return match factory_loc.handler_func(input.clone(), (req, false, factories.contexts.clone())).await {
                             Ok(mut resp) => {
                                 if req_contain_key {
                                     resp.headers_mut().append("Another-Header", HeaderValue::from_static("Ack"));

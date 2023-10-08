@@ -1,19 +1,105 @@
 use async_trait::async_trait;
+use fnv::FnvHashMap;
 use tokio::sync::Mutex;
 use urlpattern::UrlPatternMatchInput;
+use core::fmt;
 use std::{
     io,
     net::{SocketAddr, ToSocketAddrs},
-    path::PathBuf, pin::Pin, sync::Arc,
+    path::PathBuf, pin::Pin, sync::Arc, any::{Any, TypeId}, ops::Deref, fmt::Formatter,
 };
 
 use hyper::Body;
 
 use crate::{server::{util::{get_certs_and_key, process_result}, http_server::{launch_http_server, HttpServerOpt}, https_server::{launch_https_server, HttpsServerOpt}, http3_server::{launch_http3_server, Http3ServerOpt}}, process::save_pid, resource::{Resource, Responder}};
 
+
+#[derive(Default)]
+pub struct Data (FnvHashMap<TypeId, Box<dyn Any + Sync + Send>>);
+
+impl Deref for Data {
+    type Target = FnvHashMap<TypeId, Box<dyn Any + Sync + Send>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Data {
+    pub fn new(data: FnvHashMap<TypeId, Box<dyn Any + Sync + Send>>) -> Self {
+        Self(data)
+    }
+
+    pub fn default() -> Self {
+        Self(FnvHashMap::default())
+    }
+
+    pub fn insert<D>(&mut self, data: D)
+    where
+        D: Any + Send + Sync,
+    {
+        self.0.insert(TypeId::of::<D>(), Box::new(data));
+    }
+}
+
+impl fmt::Debug for Data {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        f.debug_tuple("Data").finish()
+    }
+}
+
+pub type Result<T, E = ChiteyError> = std::result::Result<T, E>;
+
+pub struct ContextImpl {
+    pub(crate) data: Data,
+}
+
+impl ContextImpl {
+    pub fn new() -> Self {
+        ContextImpl { data: Data::new(FnvHashMap::default()) }
+    }
+
+    #[must_use]
+    pub fn insert<D>(mut self, data: D) -> Self
+    where
+        D: Any + Send + Sync,
+    {
+        self.data.insert(data);
+        self
+    }
+}
+
+#[derive(Clone)]
+pub struct Context {
+    data: Arc<ContextImpl>,
+}
+
+impl Context {
+    pub fn new(data: ContextImpl) -> Self {
+        Self {
+            data: Arc::new(data),
+        }
+    }
+
+    pub fn get<D>(&self) -> &D
+    where
+        D: Any + Send + Sync,
+    {
+        self.data_opt::<D>().unwrap_or_else(|| panic!("Data `{}` does not exist.", std::any::type_name::<D>()))
+    }
+
+    pub fn data_opt<D>(&self) -> Option<&D>
+    where
+        D: Any + Send + Sync,
+    {
+        self.data.data.get(&TypeId::of::<D>()).and_then(|d| d.downcast_ref::<D>())
+    }
+}
+
 #[derive(Clone)]
 pub struct Factories {
     pub(crate) factories: Vec<(Arc<Resource>, Arc<Mutex<Pin<Box<dyn HttpServiceFactory + 'static + Send + Sync>>>>)>,
+    pub(crate) contexts: Context,
 }
 unsafe impl Send for Factories {}
 unsafe impl Sync for Factories {}
@@ -38,6 +124,7 @@ pub struct WebServer {
     tls_listen: Option<SocketAddr>,
     redirect: Option<String>,
     factories: Vec<(Resource, Pin<Box<dyn HttpServiceFactory + 'static + Send + Sync>>)>,
+    data: Data,
 }
 
 impl WebServer
@@ -49,6 +136,7 @@ impl WebServer
             tls_listen: None,
             redirect: None,
             factories: Vec::new(),
+            data: Data::default(),
         }
     }
 
@@ -112,8 +200,10 @@ impl WebServer
             factories.push((Arc::new(res.clone()), fac.clone()));
             factories2.push((Arc::new(res), fac.clone()));
         }
-        let factories = Factories{ factories };
-        let factories2 = Factories{ factories: factories2 };
+
+        let contexts = Context::new(ContextImpl { data: self.data });
+        let factories = Factories{ factories, contexts: contexts.clone() };
+        let factories2 = Factories{ factories: factories2, contexts: contexts.clone() };
 
         if let Some(cert) = self.cert {
             let tls_certs_key = match get_certs_and_key(cert) {
@@ -161,9 +251,18 @@ impl WebServer
 
         Ok(())
     }
+
+    #[must_use]
+    pub fn data<D>(mut self, data: D) -> Self
+    where
+        D: Any + Send + Sync
+    {
+        self.data.insert(data);
+        self
+    }
 }
 
-pub type Request = (http::Request<Body>, bool);
+pub type Request = (http::Request<Body>, bool, Context);
 
 use thiserror::Error;
 #[derive(Error, Debug)]
