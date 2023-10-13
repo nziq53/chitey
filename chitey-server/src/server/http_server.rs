@@ -7,7 +7,7 @@ use urlpattern::UrlPatternMatchInput;
 
 use crate::web_server::{ChiteyError, Factories};
 
-use super::util::throw_chitey_internal_server_error;
+use super::util::{throw_chitey_internal_server_error, cors_builder};
 
 
 #[derive(Clone)]
@@ -57,7 +57,7 @@ async fn redirect_to_https(
   location: String,
   _req: Request<Body>,
 ) -> Result<Response<Body>, http::Error> {
-  let mut builder = Response::builder();
+  let mut builder = cors_builder();
     builder = builder
         .status(StatusCode::PERMANENT_REDIRECT)
         .header("Location", location);
@@ -122,7 +122,7 @@ async fn not_redirect_to_https(
         }
     }
 
-    let builder = Response::builder()
+    let builder = cors_builder()
         .header("Alt-Svc", "h3=\":443\"; ma=2592000")
         .status(StatusCode::NOT_FOUND);
 

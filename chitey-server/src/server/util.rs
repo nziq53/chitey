@@ -86,3 +86,10 @@ where
         Err(e) =>Err(ChiteyError::InternalServerError(e.to_string())),
     }
 }
+
+#[inline]
+pub fn cors_builder() -> http::response::Builder {
+    let builder = hyper::Response::builder();
+    let builder = builder.header("Access-Control-Allow-Origin", "*");
+    builder
+}

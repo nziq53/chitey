@@ -2,7 +2,7 @@ use std::{sync::{self, Arc}, net::SocketAddr, convert::Infallible, pin::Pin, tas
 
 use crate::web_server::{Factories, ChiteyError};
 
-use super::util::{TlsCertsKey, throw_chitey_internal_server_error};
+use super::util::{TlsCertsKey, throw_chitey_internal_server_error, cors_builder};
 use bytes::{BytesMut, BufMut, Bytes};
 use futures_util::{ready, Future, TryStreamExt};
 use http::{Request, Response, StatusCode, HeaderValue};
@@ -188,7 +188,7 @@ async fn handle_https_service_wrap(req: Request<Body>, factories: Factories) -> 
 #[inline]
 async fn handle_https_service(req: Request<Body>, factories: Factories) -> Result<Response<Body>, ChiteyError> {
     if req.uri().path().contains("..") {
-        let builder = Response::builder()
+        let builder = cors_builder()
         .header("Alt-Svc", "h3=\":443\"; ma=2592000")
         .status(StatusCode::NOT_FOUND);
         return match builder.body(Body::empty()) {
@@ -224,7 +224,7 @@ async fn handle_https_service(req: Request<Body>, factories: Factories) -> Resul
         }
     }
 
-    let builder = Response::builder()
+    let builder = cors_builder()
         .header("Alt-Svc", "h3=\":443\"; ma=2592000")
         .status(StatusCode::NOT_FOUND);
 

@@ -20,6 +20,7 @@ use crate::web_server::Factories;
 
 
 use super::util::TlsCertsKey;
+use super::util::cors_builder;
 use super::util::throw_chitey_internal_server_error;
 
 #[derive(Clone)]
@@ -127,7 +128,7 @@ where
     T: BidiStream<Bytes> + 'static + Send + Sync,
 {
     if req.uri().path().contains("..") {
-        let resp = http::Response::builder().status(StatusCode::NOT_FOUND).body(()).unwrap();
+        let resp = cors_builder().status(StatusCode::NOT_FOUND).body(()).unwrap();
 
         throw_chitey_internal_server_error(stream.send_response(resp).await)?;
         throw_chitey_internal_server_error(stream.send_data(Bytes::copy_from_slice(b"page not found")).await)?;
@@ -291,7 +292,7 @@ where
     // Ok(send_stream.finish().await?)
     //     Ok(())
     // } else {
-    let resp = http::Response::builder().status(StatusCode::NOT_FOUND).header("Alt-Svc", "h3=\":443\"; ma=2592000").body(()).unwrap();
+    let resp = cors_builder().status(StatusCode::NOT_FOUND).header("Alt-Svc", "h3=\":443\"; ma=2592000").body(()).unwrap();
     throw_chitey_internal_server_error(send_stream.send_response(resp).await)?;
     throw_chitey_internal_server_error(send_stream.send_data(Bytes::copy_from_slice(b"page not found")).await)?;
     throw_chitey_internal_server_error(send_stream.finish().await)
